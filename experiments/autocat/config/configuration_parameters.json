@@ -1,0 +1,69 @@
+{
+  "readout": {
+    "pulse_length": [3000, "ns", "int"],
+    "pulse_amp": [0.05, "arb", "float"],
+
+    "lo_channel": [1, "arb", "int"],
+    "lo_output": [true, "arb", "bool"],
+    "lo_power": [18, "dBm", "float"],
+    "lo_frequency": [7.0, "GHz", "int"],
+    "im_frequency": [61, "MHz", "int"],
+    "sideband": [-1, "arb", "float"],
+
+    "resonance_frequency": [6.9390, "GHz", "int"],
+
+    "time_of_flight": [360, "ns", "int"],
+    "readout_phase": [0, "2pi", "float"],
+
+    "reset_time": [5000, "ns", "int"]
+  },
+
+  "transmon": {
+    "pulse_length": [1000, "ns", "int"],
+    "pulse_amp": [0.005, "arb", "float"],
+
+    "lo_channel": [2, "arb", "int"],
+    "lo_output": [true, "arb", "bool"],
+    "lo_power": [15, "dBm", "float"],
+    "lo_frequency": [2.7822, "GHz", "int"],
+    "im_frequency": [90, "MHz", "int"],
+    "sideband": [-1, "arb", "float"],
+
+    "resonance_frequency": [2.6922, "GHz", "int"]
+  },
+
+  "memory": {
+    "pulse_length": [100, "ns", "int"],
+    "const_pulse_amp": [0.02, "arb", "float"],
+    "gaussian_pulse_amp": [0.2, "arb", "float"],
+
+    "lo_channel": [3, "arb", "int"],
+    "lo_output": [true, "arb", "bool"],
+    "lo_power": [15, "dBm", "float"],
+    "lo_frequency": [3.55, "GHz", "int"],
+    "im_frequency": [100, "MHz", "int"],
+    "sideband": [-1, "arb", "float"],
+
+    "i_offset": [-0.01721, "arb", "float"],
+    "q_offset": [-0.00985, "arb", "float"],
+    "k": [1.015, "arb", "float"],
+    "theta": [1.6, "arb", "float"],
+
+    "resonance_frequency": [3.45818, "GHz", "int"]
+  },
+
+  "coil": {
+    "voltage": [0.0, "V", "float"],
+    "resistor": [5, "kOhm", "float"],
+    "module": [1, "arb", "int"],
+
+    "step_duration": [200, "ms", "int"],
+    "step_height": [100, "mV", "float"]
+  },
+
+  "twpa": {
+    "output": [true, "arb", "bool"],
+    "power": [-6, "dBm", "float"],
+    "frequency": [6.0, "GHz", "int"]
+  }
+}
