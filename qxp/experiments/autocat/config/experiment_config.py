@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from utils.qua import iq_imbalance_k_theta
-from utils.waveforms import gaussian_shape
+from qxp.utils.qua import iq_imbalance_k_theta
+from qxp.utils.waveforms import gaussian_shape
 
 
 PARAMETERS_PATH = Path('configuration_parameters.json')

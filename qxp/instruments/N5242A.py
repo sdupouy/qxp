@@ -11,7 +11,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import Literal
 
-from utilities.plot_utilities import FONT_SIZE
 
 VISA_ADDRESS = r'TCPIP0::192.168.0.80::inst0::INSTR'
 BOOL2STRING = {True: "ON", False: "OFF"}
@@ -201,8 +200,8 @@ if __name__ == '__main__':
     axs.plot(frequencies / 1e9, vna.get_magnitude())
     # axs[1].plot(frequencies, vna.get_phase(electrical_delay=electrical_delay), color='black')
 
-    axs.set_ylabel('S31 circulator', fontsize=FONT_SIZE)
-    axs.set_xlabel('VNA frequency (GHz)', fontsize=FONT_SIZE)
+    axs.set_ylabel('S31 circulator')
+    axs.set_xlabel('VNA frequency (GHz)')
 
     axs.grid()
 

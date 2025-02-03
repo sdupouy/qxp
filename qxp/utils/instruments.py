@@ -1,12 +1,13 @@
 from typing import Dict
 import numpy as np
-
 import time
 
-from instruments.APUASYN20 import APUASYN20
-from instruments.ASPIN20G import ASPIN20G
-from instruments.BN103 import BN103
+from qxp.instruments.APUASYN20 import APUASYN20
+from qxp.instruments.ASPIN20G import ASPIN20G
+from qxp.instruments.BN103 import BN103
 
+
+# TODO: place in config
 APUASYN20_VISA_ADDRESS = 'TCPIP0::192.168.0.58::inst0::INSTR'
 ASPIN20G_VISA_ADDRESS = 'TCPIP0::192.168.0.43::inst0::INSTR'
 BILT100_IP_ADDRESS = '192.168.0.136'
@@ -79,10 +80,3 @@ def turn_off_instruments(config: Dict):
     module = config['coil']['module']
     bn100.ramp_voltage(module=module, channel=1, value=0, step_duration_ms=100, step_height_v=0.1)
     bn100.set_output(module=module, channel=1, state='off')
-
-
-if __name__ == '__main__':
-    config_params = get_params()
-    config = get_config(config_params)
-    configure_instruments(config)
-    # turn_off_instruments(config_params)

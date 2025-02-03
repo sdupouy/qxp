@@ -10,14 +10,21 @@ from qualang_tools.plot import interrupt_on_close
 from qualang_tools.plot.fitting import Fit
 u = unit()
 
-from experiments.base_experiment import BaseQuaExperiment
-from utils.plot import clean_axes, adjust_axes_limits
+from qxp.experiments.base_experiment import BaseQuaExperiment
+from qxp.utils.plot import clean_axes, adjust_axes_limits
 
 
 class OneToneSpectroscopy(BaseQuaExperiment):
     experiment_name = 'one_tone_spectroscopy'
 
     def __init__(self, i_freq, reset_time, n_avg, excite_transmon=False, **kwargs):
+        """
+        Args:
+            i_freq: An array of the intermediate frequencies to use.
+            reset_time: The reset time between readout sequences.
+            n_avg: The averaging.
+            excite_transmon: Whether to excite the transmon before readout.
+        """
         super().__init__(**kwargs)
         self.i_freq = i_freq
         self.reset_time = reset_time
@@ -85,49 +92,71 @@ class OneToneSpectroscopy(BaseQuaExperiment):
     def live_plotting(self, job, results):
         lo_freq = self.config_params['readout']['lo_frequency']
         sideband = self.config_params['readout']['sideband']
-        r_freq = (lo_freq + sideband * self.i_freq) / u.MHz
+        r_freq = lo_freq + sideband * self.i_freq
 
         fig, axs = plt.subplots(2, 1, sharex=True, tight_layout=True, figsize=(6, 8))
         interrupt_on_close(fig, job)  # Interrupt the job when closing the figure
 
         fig.suptitle(f"Resonator spectroscopy - LO = {lo_freq / u.GHz} GHz")
         axs[0].set_ylabel(r"$R=\sqrt{I^2 + Q^2}$ (V)")
-        axs[1].set_ylabel("Phase [rad]")
-        axs[1].set_xlabel("Readout pulse frequency (MHz)")
+        axs[1].set_ylabel("Phase (rad)")
+        axs[1].set_xlabel("Readout pulse frequency (Hz)")
         fig.canvas.manager.set_window_title(f'{self.experiment_name}: {self.start_timestamp}')
 
         while results.is_processing():
-            clean_axes(axs)
-
+            # Process the data
             data = self.get_data(results)
             iq_data = data['iq_data']
             amplitude = np.abs(iq_data)  # Amplitude
             phase = np.angle(iq_data)  # Phase
             unwrapped_phase = signal.detrend(np.unwrap(phase))
 
-            # Progress bar
-            progress_counter(data['iteration'], self.n_avg, start_time=results.get_start_time())
-
-            # Plot results
+            # Plot the results
+            clean_axes(axs)
             axs[0].plot(r_freq, amplitude, ".")
             axs[1].plot(r_freq, unwrapped_phase, ".")
 
             adjust_axes_limits(axs)
             plt.pause(0.1)
+            progress_counter(data['iteration'], self.n_avg, start_time=results.get_start_time())  # progress bar
 
     def plot(self):
-        pass
+        lo_freq = self.config_params['readout']['lo_frequency']
+        sideband = self.config_params['readout']['sideband']
+        r_freq = (lo_freq + sideband * self.i_freq) / u.MHz
 
-    def fit(self):
-        # Fit the data
-        fig, ax = plt.subplots()
-        ax.set_ylabel(r"$R=\sqrt{I^2 + Q^2}$ [V]")
-        ax.set_xlabel("Intermediate frequency (MHz)")
+        fig, axs = plt.subplots(2, 1, sharex=True, tight_layout=True, figsize=(6, 8))
+        fig.suptitle(f"Resonator spectroscopy")
+        axs[0].set_ylabel(r"$R=\sqrt{I^2 + Q^2}$ (V)")
+        axs[1].set_ylabel("Phase (rad)")
+        axs[1].set_xlabel("Readout pulse frequency (MHz)")
 
-        fit = Fit()
-        spectroscopy_fit = fit.reflection_resonator_spectroscopy(self.i_freq / u.MHz, amplitude, plot=True)
-        resonance_frequency_mhz = spectroscopy_fit['f'][0]
+        iq_data = self.data['iq_data']
+        amplitude = np.abs(iq_data)  # Amplitude
+        phase = np.angle(iq_data)  # Phase
+        unwrapped_phase = signal.detrend(np.unwrap(phase))
 
-        print(
-            f"Resonance frequency = {resonator_lo_freq / u.MHz + sideband * resonance_frequency_mhz:.3f} MHz \n"
-            f"Intermediate frequency = {resonance_frequency_mhz:.3f} MHz")
+        # Plot results
+        axs[0].plot(r_freq, amplitude, ".", label="Data")
+        axs[1].plot(r_freq, unwrapped_phase, ".")
+        return fig
+
+    def fit(self, fig=None):
+        lo_freq = self.config_params['readout']['lo_frequency']
+        sideband = self.config_params['readout']['sideband']
+        r_freq = lo_freq + sideband * self.i_freq
+
+        fit = Fit().reflection_resonator_spectroscopy(r_freq, np.abs(self.data['iq_data']))
+
+        print(f"Resonance frequency = {fit['f'][0] / u.GHz:.3f} GHz")
+        print(f"Kappa = {fit['k'][0] / u.MHz:.3f} MHz")
+
+        if fig is not None:
+            axs = fig.axes
+            axs[0].plot(r_freq, fit['fit_func'](r_freq), ".", label="Fit")
+            axs[0].legend()
+
+        return {
+            'readout_resonator_resonance_frequency': fit['f'][0],
+            'readout_resonator_kappa': fit['k'][0],
+        }

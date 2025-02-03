@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from utils.config import load_and_parse_parameters, load_experiment_config_module
+from qxp.utils.config import load_and_parse_parameters, load_experiment_config_module
 
 
 EXPERIMENT_CONFIG_PATH = Path('experiments/autocat/config/experiment_config.py')

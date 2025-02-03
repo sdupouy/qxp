@@ -3,22 +3,34 @@ import matplotlib.pyplot as plt
 
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
 
-from config import *
-from utils.instruments import configure_instruments
-from utils.save import get_current_timestamp, get_experiment_params, save_experiment
+from qxp.config import *
+from qxp.utils.instruments import configure_instruments
+from qxp.utils.save import get_current_timestamp, get_experiment_params, get_latest_run_path, \
+    load_experiment, save_dict_to_database, make_experiment_save_path, save_dict_to_hdf5
 
 
 class BaseQuaExperiment(ABC):
     experiment_name = 'abstract_base_experiment'
 
-    def __init__(self, simulate=False, save_data=True):
+    def __init__(self, simulate=False, do_fit=True, do_save=True, do_update_db=False):
+        """ Initialize the experiment.
+        Args:
+              simulate (bool, optional): Whether to simulate the experiment.
+              do_fit (bool, optional): Whether to fit the experiment.
+              do_save (bool, optional): Whether to save the data.
+              do_update_db (bool, optional): Whether to update the calibration database.
+        """
         self.simulate = simulate
-        self.save_data = save_data
-        self.start_timestamp = get_current_timestamp()
+        self.do_fit = do_fit
+        self.do_save = do_save
+        self.do_update_db = do_update_db
+        self.start_timestamp = None
         self.end_timestamp = None
         self.config_params = get_config_params()
         self.qua_config = get_qua_config(self.config_params)
         self.data = {}
+        self.measured_params = {}
+        self.save_path = None
 
     def set_default_parameters(self):
         """ Set the default parameters for the experiment. """
@@ -68,21 +80,35 @@ class BaseQuaExperiment(ABC):
         """ Return the dictionary containing the data. """
         pass
 
-    def _set_self_data(self, results):
-        self.data = self.get_data(results)
-
+    @abstractmethod
     def plot(self):
         pass
 
-    def fit(self):
+    @abstractmethod
+    def fit(self, axs=None):
         pass
 
+    def save_measured_params_to_db(self):
+        if self.measured_params:
+            save_dict_to_database(self.measured_params, self.start_timestamp, self.save_path)
+        else:
+            print("[!] No measured values to save to database. Is do_fit=True?")
+
     def save(self):
+        """ Save the experiment parameters and data in the HDF5 format. """
+        self.save_path = make_experiment_save_path(self.experiment_name, self.start_timestamp)
         dict_to_save = get_experiment_params(self)
-        save_experiment(self.experiment_name, self.start_timestamp, dict_to_save)
+        save_dict_to_hdf5(dict_to_save, self.save_path)
+
+    def load(self, path=None):
+        """ Load saved data. If path is None the latest run will be loaded. """
+        if path is None:
+            path = get_latest_run_path(self.experiment_name)
+        load_experiment(self, path)
 
     def run(self):
         """ Run the experiment: set up, measure, analyze, plot and save. """
+        self.start_timestamp = get_current_timestamp()
         self.set_default_parameters()
         self.pre_process()
         prog = self.get_qua_program()
@@ -94,6 +120,14 @@ class BaseQuaExperiment(ABC):
         if callable(live_plotting):
             live_plotting(job, results)
 
-        self._set_self_data(results)
-        if self.save_data:
+        self.data = self.get_data(results)
+        self.end_timestamp = get_current_timestamp()
+        if self.do_fit:
+            self.measured_params = self.fit()
+        if self.do_save:
             self.save()
+        if self.do_update_db:
+            self.save_measured_params_to_db()
+
+    def __str__(self):
+        return f'{self.experiment_name}__{self.start_timestamp}'

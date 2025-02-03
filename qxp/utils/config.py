@@ -2,16 +2,7 @@ import json
 from typing import Tuple, Dict
 from pathlib import Path
 import importlib.util
-
 import numpy as np
-
-
-def load_json(path: Path):
-    if not path.exists():
-        raise FileNotFoundError(f"No such file: '{path}'")
-
-    with path.open('r', encoding='utf-8') as file:
-        return json.load(file)
 
 
 def parse_parameter(parameter: Tuple):
@@ -86,10 +77,11 @@ def parse_dict(unparsed_dict: Dict):
     return parsed_dict
 
 
-def load_and_parse_parameters(parameters_path: Path):
-    unparsed_dict = load_json(parameters_path)
-    parsed_dict = parse_dict(unparsed_dict)
-    return parsed_dict
+def load_and_parse_parameters(path: Path):
+    with path.open('r', encoding='utf-8') as file:
+        unparsed_dict = json.load(file)
+    return parse_dict(unparsed_dict)
+
 
 def load_experiment_config_module(experiment_config_path):
     if experiment_config_path.exists():
