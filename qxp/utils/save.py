@@ -1,13 +1,10 @@
 import inspect
 from datetime import datetime
 import h5py
-from pathlib import Path
 
-from qxp.config import COOLDOWN_ID, SAVE_PATH
+from qxp.config import COOLDOWN_NUMBER, COOLDOWN_SAVE_PATH, TIMESTAMP_FORMAT, CHIP_NAME
 from qxp.measurement_db.core.models import Parameter, Measurement, Cooldown, OpticalTable
 
-# TODO: place in config
-TIMESTAMP_FORMAT = "%d-%m-%Y_%Hh%M:%S"
 
 def get_current_timestamp():
     """ Get the current timestamp as a string. """
@@ -48,7 +45,7 @@ def make_experiment_save_path(experiment_name, timestamp):
         experiment_name: Experiment name.
         timestamp: Experiment self.start_timestamp.
     """
-    save_path = Path(SAVE_PATH, COOLDOWN_ID, experiment_name)
+    save_path = COOLDOWN_SAVE_PATH / experiment_name
     save_path.mkdir(parents=True, exist_ok=True)
     save_path = save_path.joinpath(timestamp).with_suffix('.h5')
     return save_path
@@ -109,12 +106,12 @@ def load_experiment(path, experiment):
 
 def get_latest_run_path(experiment_name):
     """ Get the path of the latest run of an experiment. """
-    save_path = Path(SAVE_PATH, COOLDOWN_ID, experiment_name)
+    save_path = COOLDOWN_SAVE_PATH / experiment_name
     files = list(save_path.glob('*.h5'))
     return max(files, key=lambda x: datetime_from_timestamp(x.stem))
 
 
-def save_dict_to_database(dict_to_save, exp_timestamp, data_path):
+def save_dict_to_db(dict_to_save, exp_timestamp, data_path):
     """ Save dictionary to database.
     Args:
         dict_to_save: Dictionary to save.
@@ -123,7 +120,7 @@ def save_dict_to_database(dict_to_save, exp_timestamp, data_path):
     """
     for key, value in dict_to_save.items():
         parameter = Parameter.objects.get_or_create(name=key)
-        cooldown = Cooldown.objects.get(id=COOLDOWN_ID)
+        cooldown = Cooldown.objects.get(chip__name=CHIP_NAME, number=COOLDOWN_NUMBER)
         optical_table = OpticalTable.objects.latest('datetime')
         measurement = Measurement(
             parameter=parameter,
@@ -134,3 +131,13 @@ def save_dict_to_database(dict_to_save, exp_timestamp, data_path):
             data_path=data_path,
         )
         measurement.save()
+
+def fetch_last_from_db(parameter_name):
+    """ Fetch last saved measurement from database.
+    Args:
+        parameter_name: The name of the parameter.
+    """
+    return Measurement.objects.filter(
+        cooldown__chip__name=CHIP_NAME,
+        parameter__name=parameter_name
+    ).latest('datetime')

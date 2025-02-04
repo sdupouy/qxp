@@ -1,13 +1,118 @@
 from pathlib import Path
+from qualang_tools.units import unit
+import numpy as np
+u = unit()
 
 from qxp.utils.qua import iq_imbalance_k_theta
 from qxp.utils.waveforms import gaussian_shape
 
 
-PARAMETERS_PATH = Path('configuration_parameters.json')
-SAVE_PATH = Path(r'D:\data\tunable_autocat\RC-0008-01-B\cooldown_05_top')
-COOLDOWN_ID = 5
+BASE_SAVE_PATH = Path(r'D:\data\tunable_autocat')
+CHIP_NAME = 'RC-0008-01-B-top'
+COOLDOWN_NUMBER = 5
 
+CONFIG_PARAMS = {
+    "elements": {
+        "readout": {
+            "lo": "ro_resonator_lo",
+            "pulse_length": 3000 * u.ns,
+            "pulse_amp": 0.05,
+
+            "im_frequency": 61 * u.MHz,
+            "sideband": -1,
+
+            "time_of_flight": 360 * u.ns,
+            "readout_phase": 0 * 2*np.pi,
+
+            "reset_time": 5000 * u.ns
+        },
+
+        "transmon": {
+            "pulse_length": 1000 * u.ns,
+            "pulse_amp": 0.005,
+
+            "lo_channel": 2,
+            "lo_output": True,
+            "lo_power": 15,  # dBm
+            "lo_frequency": 2.7822 * u.GHz,
+            "im_frequency": 90 * u.MHz,
+            "sideband": -1,
+
+            "resonance_frequency": 2.6922 * u.GHz
+        },
+
+        "memory": {
+            "pulse_length": 100 * u.ns,
+            "const_pulse_amp": 0.02,
+            "gaussian_pulse_amp": 0.2,
+
+            "lo_channel": 3,
+            "lo_output": True,
+            "lo_power": 15,  # dBm
+            "lo_frequency": 3.55 * u.GHz,
+            "im_frequency": 100 * u.MHz,
+            "sideband": -1,
+
+            "i_offset": -0.01721,
+            "q_offset": -0.00985,
+            "k": 1.015,
+            "theta": 1.6,
+
+            "resonance_frequency": 3.45818 * u.GHz
+        },
+
+        "coil": {
+            "dc_source": "coil_dc_source"
+        },
+
+        "twpa": {
+            "pump": "twpa_pump"
+        }
+    },
+    "instruments": {
+        "ro_resonator_lo": {
+            "class": "APUASYN20",
+            "address": "TCPIP0::192.168.0.58::inst0::INSTR",
+            "channel": 1,
+            "output": False,
+            "frequency": 7.0 * u.GHz,
+            "power": 18  # dBm
+        },
+        "transmon_lo": {
+            "class": "APUASYN20",
+            "address": "TCPIP0::192.168.0.58::inst0::INSTR",
+            "channel": 2,
+            "output": False,
+            "frequency": 7.0 * u.GHz,
+            "power": 18  # dBm
+        },
+        "memory_lo": {
+            "class": "APUASYN20",
+            "address": "TCPIP0::192.168.0.58::inst0::INSTR",
+            "channel": 3,
+            "output": False,
+            "frequency": 7.0 * u.GHz,
+            "power": 18  # dBm
+        },
+        "twpa_pump": {
+            "class": "ASPIN20G",
+            "address": "TCPIP0::192.168.0.43::inst0::INSTR",
+            "output": False,
+            "frequency": 7.0 * u.GHz,
+            "power": 18  # dBm
+        },
+        "coil_dc_source": {
+            "class": "BN103",
+            "address": "192.168.0.136",
+            "module": 1,
+            "channel": 1,
+            "voltage": 0.0 * u.V,
+            "resistor": 5 * 1e3,  # Ohm
+            "step_duration": 200 * u.ms,
+            "step_height": 100 * u.mV
+        }
+    }
+}
 
 def get_qua_config(params):
     config = {

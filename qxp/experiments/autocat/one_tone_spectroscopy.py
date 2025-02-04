@@ -12,12 +12,13 @@ u = unit()
 
 from qxp.experiments.base_experiment import BaseQuaExperiment
 from qxp.utils.plot import clean_axes, adjust_axes_limits
+from qxp.utils.save import fetch_last_from_db
 
 
 class OneToneSpectroscopy(BaseQuaExperiment):
     experiment_name = 'one_tone_spectroscopy'
 
-    def __init__(self, i_freq, reset_time, n_avg, excite_transmon=False, **kwargs):
+    def __init__(self, i_freq=None, reset_time=None, n_avg=None, excite_transmon=False, **kwargs):
         """
         Args:
             i_freq: An array of the intermediate frequencies to use.
@@ -32,7 +33,10 @@ class OneToneSpectroscopy(BaseQuaExperiment):
         self.excite_transmon = excite_transmon
 
     def set_default_parameters(self):
-        pass
+        if self.i_freq is None:
+            self.i_freq = np.linspace(20, 100, 101) * u.MHz
+        if self.config_params['ro_resonator']['']:
+            resonance_freq = fetch_last_from_db('ro_resonator_resonance_freq')
 
     def get_qua_program(self):
         """ QUA program """

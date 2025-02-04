@@ -4,7 +4,7 @@ from django.utils import timezone
 
 class Chip(models.Model):
     name = models.CharField(max_length=255, unique=True)
-    picture = models.ImageField(upload_to='chips/', null=True, blank=True)
+    picture = models.ImageField(upload_to='chip_pictures/', null=True, blank=True)
     comment = models.TextField(blank=True)
 
     def __str__(self):
@@ -21,6 +21,7 @@ class OpticalTable(models.Model):
 
 
 class Cooldown(models.Model):
+    number = models.PositiveIntegerField()
     datetime = models.DateTimeField(default=timezone.now)
     chip = models.ForeignKey(Chip, on_delete=models.PROTECT)
     cabling = models.ImageField(upload_to='fridge_cablings/', null=True, blank=True)
@@ -28,6 +29,9 @@ class Cooldown(models.Model):
 
     def __str__(self):
         return self.datetime
+
+    class Meta:
+        unique_together = [['number', 'chip']]
 
 
 class ChipElement(models.Model):

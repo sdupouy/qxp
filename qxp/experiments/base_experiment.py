@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
 
 from qxp.config import *
-from qxp.utils.instruments import configure_instruments
+from qxp.utils.instruments import initialize_instruments
 from qxp.utils.save import get_current_timestamp, get_experiment_params, get_latest_run_path, \
-    load_experiment, save_dict_to_database, make_experiment_save_path, save_dict_to_hdf5
+    load_experiment, save_dict_to_db, make_experiment_save_path, save_dict_to_hdf5
 
 
 class BaseQuaExperiment(ABC):
@@ -38,7 +38,7 @@ class BaseQuaExperiment(ABC):
 
     def pre_process(self):
         """ Do the preprocessing (generally instrument setup). """
-        configure_instruments(self.config_params)
+        initialize_instruments(self.config_params)
 
     @abstractmethod
     def get_qua_program(self):
@@ -51,9 +51,12 @@ class BaseQuaExperiment(ABC):
 
         # Save the QUA debug script
         debug_script = generate_qua_script(prog=prog, config=self.qua_config)
-        debug_script_path = SAVE_PATH / DEBUG_SCRIPTS_DIRECTORY / f'{self.experiment_name}_{self.start_timestamp}.py'
-        with open(debug_script_path, 'w') as f_debug:
-            f_debug.write(debug_script)
+        debug_script_path = (
+                COOLDOWN_SAVE_PATH
+                / DEBUG_SCRIPTS_DIRECTORY
+                / f'{self.experiment_name}_{self.start_timestamp}.py'
+        )
+        debug_script_path.write_text(debug_script)
 
         # Simulate or execute
         if self.simulate:
@@ -90,7 +93,7 @@ class BaseQuaExperiment(ABC):
 
     def save_measured_params_to_db(self):
         if self.measured_params:
-            save_dict_to_database(self.measured_params, self.start_timestamp, self.save_path)
+            save_dict_to_db(self.measured_params, self.start_timestamp, self.save_path)
         else:
             print("[!] No measured values to save to database. Is do_fit=True?")
 

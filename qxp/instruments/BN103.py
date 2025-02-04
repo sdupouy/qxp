@@ -1,4 +1,4 @@
-""" Driver for BLIT BN103 unit.
+""" Driver for BILT BN103 unit.
 For BE2101 cards, setting the channel does not change anything.
 """
 
@@ -17,7 +17,6 @@ def access(func):
         result = func(*args, **kwargs)
         self.close()
         return result
-
     return wrapper
 
 
@@ -25,12 +24,8 @@ def str2command(command_string: str):
     return bytes(command_string + '\n', 'ascii')
 
 
-IP_ADDRESS = '192.168.0.136'
-
-
 class BN103:
-
-    def __init__(self, ip: str = IP_ADDRESS, port: int = 5025):
+    def __init__(self, ip: str, port: int = 5025):
         self.ip = ip
         self.port = port
         self.client: Optional[socket.socket] = None
@@ -40,7 +35,6 @@ class BN103:
         if not self._is_open:
             self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.client.connect((self.ip, self.port))
-
         self._is_open += 1
 
     def close(self):
@@ -135,7 +129,6 @@ class BN103:
 
     @access
     def ramp_voltage(self, module: int, channel: int, value: float, step_duration_ms, step_height_v) -> float:
-
         self.set_mode(module, channel, 'stair')
         self.set_staircase_parameters(module, channel, step_duration_ms=step_duration_ms, step_height=step_height_v)
 
@@ -145,25 +138,13 @@ class BN103:
         ramp_duration_ms = num_steps * step_duration_ms
 
         self.set_voltage(module, channel, value)
-        time.sleep(0.1)
+        time.sleep(0.1)  # TODO: check whether necessary
         self.client.send(str2command(f'trig:input:init'))
-
         return ramp_duration_ms
 
 
 if __name__ == '__main__':
-    bn103 = BN103()
+    bn103 = BN103('192.168.0.136')
     bn103.open()
     ramp_duration = bn103.ramp_voltage(module=1, channel=1, value=0.0, step_duration_ms=200, step_height_v=0.010)
     print(f'{ramp_duration / 1e3 :.2f} seconds')
-
-
-    # result = bn103.ramp_voltage()
-
-    # bn103.reset_rack()
-    # bn103.set_slope(2, 1, 1e-5)
-    # bn103.ramp_voltage(2, 1, 0)
-    # bn103.set_output(2, 1, 'on')
-    # bn103.set_voltage(2, 1, 0.8e-3)
-    # data = bn103.get_voltage(2, 1)
-    # print(data)
