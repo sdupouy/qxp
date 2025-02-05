@@ -26,8 +26,13 @@ class SkeletonExperiment(BaseQuaExperiment):
         # DEFINE YOUR EXPERIMENT PARAMETERS
         # self.param = param
 
-    def set_default_parameters(self):
-        pass
+    def auto_set_exp_config(self):
+        """ Automatically set the parameters of the experiment. """
+        ...  # use an autoconfig function in qxp.experiments.your_project.config.autoconfig
+
+    def auto_set_instruments_config(self):
+        """ Automatically set the instruments' initialization parameters. """
+        ...  # use an autoconfig function in qxp.experiments.your_project.config.autoconfig
 
     def get_qua_program(self):
         """ QUA program """
@@ -44,7 +49,7 @@ class SkeletonExperiment(BaseQuaExperiment):
 
     def get_data(self, results):
         i_rawdata, q_rawdata, iteration = results.fetch_all()
-        readout_pulse_length = self.config_params['readout']['pulse_length']
+        readout_pulse_length = self.exp_config['readout']['pulse_length']
         iq_data = u.demod2volts(i_rawdata + 1j * q_rawdata, readout_pulse_length, single_demod=True)
         data = {
             'iq_data': iq_data,

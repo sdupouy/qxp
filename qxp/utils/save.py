@@ -137,7 +137,12 @@ def fetch_last_from_db(parameter_name):
     Args:
         parameter_name: The name of the parameter.
     """
-    return Measurement.objects.filter(
-        cooldown__chip__name=CHIP_NAME,
-        parameter__name=parameter_name
-    ).latest('datetime')
+    try:
+        measurement = Measurement.objects.filter(
+            cooldown__chip__name=CHIP_NAME,
+            parameter__name=parameter_name
+        ).latest('datetime')
+    except Measurement.DoesNotExist:
+        measurement = None
+    return measurement
+

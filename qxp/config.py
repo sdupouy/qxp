@@ -1,3 +1,9 @@
+""" Global configuration file.
+Here are defined the configuration parameters that will be used by the experiment classes.
+Per-experiment (local) configurations can be placed within the corresponding experiment directory.
+The local configuration to be used is specified in the EXPERIMENT_CONFIG_PATH constant.
+"""
+
 from pathlib import Path
 
 from qxp.utils.config import load_experiment_config_module
@@ -21,6 +27,7 @@ get_qua_config = experiment_config.get_qua_config  # function that returns the Q
 BASE_SAVE_PATH = experiment_config.BASE_SAVE_PATH
 CHIP_NAME = experiment_config.CHIP_NAME
 COOLDOWN_NUMBER = experiment_config.COOLDOWN_NUMBER
-CONFIG_PARAMS = experiment_config.CONFIG_PARAMS
+EXP_CONFIG = experiment_config.EXP_CONFIG
+INSTRUMENTS_CONFIG = experiment_config.INSTRUMENTS_CONFIG
 
 COOLDOWN_SAVE_PATH = Path(BASE_SAVE_PATH, CHIP_NAME, COOLDOWN_NUMBER)

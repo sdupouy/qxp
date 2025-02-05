@@ -74,8 +74,7 @@ def turn_off_bn103(config):
     instrument.close()
 
 
-def initialize_instruments(config_params):
-    instruments_config = config_params['instruments']
+def initialize_instruments_from_config(instruments_config):
     for name, config in instruments_config.items():
         print('[+] Initializing', name)
         match config['class']:
@@ -90,8 +89,7 @@ def initialize_instruments(config_params):
     print('[+] Done initializing instruments')
 
 
-def turn_off_instruments(config_params):
-    instruments_config = config_params['instruments']
+def turn_off_instruments_from_config(instruments_config):
     for name, config in instruments_config.items():
         print('[+] Turning off instruments', name)
         match config['class']:

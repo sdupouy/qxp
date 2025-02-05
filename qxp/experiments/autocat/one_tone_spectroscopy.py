@@ -12,34 +12,38 @@ u = unit()
 
 from qxp.experiments.base_experiment import BaseQuaExperiment
 from qxp.utils.plot import clean_axes, adjust_axes_limits
-from qxp.utils.save import fetch_last_from_db
+from qxp.experiments.autocat.config import autoconfig
 
 
 class OneToneSpectroscopy(BaseQuaExperiment):
     experiment_name = 'one_tone_spectroscopy'
 
-    def __init__(self, i_freq=None, reset_time=None, n_avg=None, excite_transmon=False, **kwargs):
+    def __init__(self, i_freq=None, n_avg=2000, excite_transmon=False, **kwargs):
         """
         Args:
             i_freq: An array of the intermediate frequencies to use.
-            reset_time: The reset time between readout sequences.
             n_avg: The averaging.
             excite_transmon: Whether to excite the transmon before readout.
         """
         super().__init__(**kwargs)
-        self.i_freq = i_freq
-        self.reset_time = reset_time
+        self.i_freq = np.linspace(20, 100, 101) * u.MHz if i_freq is None else i_freq
         self.n_avg = n_avg
         self.excite_transmon = excite_transmon
 
-    def set_default_parameters(self):
-        if self.i_freq is None:
-            self.i_freq = np.linspace(20, 100, 101) * u.MHz
-        if self.config_params['ro_resonator']['']:
-            resonance_freq = fetch_last_from_db('ro_resonator_resonance_freq')
+    def auto_set_exp_config(self):
+        autoconfig.auto_set_exp_config(self.exp_config)
+
+    def auto_set_instruments_config(self):
+        autoconfig.auto_set_instruments_config(self.instruments_config, self.exp_config)
+        
+        # set the readout resonator LO
+        resonance_freq = self.exp_config['ro_resonator']['resonance_freq']
+        lo_freq = resonance_freq + (self.i_freq[0] + self.i_freq[-1]) // 2 + self.i_freq[0]
+        self.instruments_config['ro_resonator_lo']['frequency'] = lo_freq
 
     def get_qua_program(self):
         """ QUA program """
+        ro_reset_time = self.exp_config['ro_resonator']['reset_time']
         with program() as prog:
             n = declare(int)  # QUA variable for the averaging loop
             f = declare(int)  # QUA variable for the readout frequency
@@ -64,7 +68,7 @@ class OneToneSpectroscopy(BaseQuaExperiment):
                         demod.full("sin", I),
                         demod.full("cos", Q),
                     )
-                    wait(u.to_clock_cycles(self.reset_time), "readout_resonator")
+                    wait(u.to_clock_cycles(ro_reset_time), "readout_resonator")
 
                     save(I, I_st)
                     save(Q, Q_st)
@@ -85,7 +89,7 @@ class OneToneSpectroscopy(BaseQuaExperiment):
 
     def get_data(self, results):
         i_rawdata, q_rawdata, iteration = results.fetch_all()
-        readout_pulse_length = self.config_params['readout']['pulse_length']
+        readout_pulse_length = self.exp_config['ro_resonator']['pulse_length']
         iq_data = u.demod2volts(i_rawdata + 1j * q_rawdata, readout_pulse_length, single_demod=True)
         data = {
             'iq_data': iq_data,
@@ -94,8 +98,9 @@ class OneToneSpectroscopy(BaseQuaExperiment):
         return data
 
     def live_plotting(self, job, results):
-        lo_freq = self.config_params['readout']['lo_frequency']
-        sideband = self.config_params['readout']['sideband']
+        lo = self.exp_config['ro_resonator']['lo']
+        lo_freq = self.instruments_config[lo]['frequency']
+        sideband = self.exp_config['ro_resonator']['sideband']
         r_freq = lo_freq + sideband * self.i_freq
 
         fig, axs = plt.subplots(2, 1, sharex=True, tight_layout=True, figsize=(6, 8))
@@ -125,8 +130,9 @@ class OneToneSpectroscopy(BaseQuaExperiment):
             progress_counter(data['iteration'], self.n_avg, start_time=results.get_start_time())  # progress bar
 
     def plot(self):
-        lo_freq = self.config_params['readout']['lo_frequency']
-        sideband = self.config_params['readout']['sideband']
+        lo = self.exp_config['ro_resonator']['lo']
+        lo_freq = self.instruments_config[lo]['frequency']
+        sideband = self.exp_config['ro_resonator']['sideband']
         r_freq = (lo_freq + sideband * self.i_freq) / u.MHz
 
         fig, axs = plt.subplots(2, 1, sharex=True, tight_layout=True, figsize=(6, 8))
@@ -146,8 +152,9 @@ class OneToneSpectroscopy(BaseQuaExperiment):
         return fig
 
     def fit(self, fig=None):
-        lo_freq = self.config_params['readout']['lo_frequency']
-        sideband = self.config_params['readout']['sideband']
+        lo = self.exp_config['ro_resonator']['lo']
+        lo_freq = self.instruments_config[lo]['frequency']
+        sideband = self.exp_config['ro_resonator']['sideband']
         r_freq = lo_freq + sideband * self.i_freq
 
         fit = Fit().reflection_resonator_spectroscopy(r_freq, np.abs(self.data['iq_data']))
