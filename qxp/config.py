@@ -27,6 +27,7 @@ get_qua_config = experiment_config.get_qua_config  # function that returns the Q
 BASE_SAVE_PATH = experiment_config.BASE_SAVE_PATH
 CHIP_NAME = experiment_config.CHIP_NAME
 COOLDOWN_NUMBER = experiment_config.COOLDOWN_NUMBER
+RACK_NAME = experiment_config.RACK_NAME
 EXP_CONFIG = experiment_config.EXP_CONFIG
 INSTRUMENTS_CONFIG = experiment_config.INSTRUMENTS_CONFIG
 

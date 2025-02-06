@@ -3,17 +3,18 @@ import matplotlib.pyplot as plt
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
 
 from qxp.config import EXP_CONFIG, get_qua_config, QOP_IP, QOP_PORT, CLUSTER_NAME, COOLDOWN_SAVE_PATH, \
-    DEBUG_SCRIPTS_DIRECTORY, INSTRUMENTS_CONFIG
+    DEBUG_SCRIPTS_DIRECTORY, INSTRUMENTS_CONFIG, CHIP_NAME, COOLDOWN_NUMBER, RACK_NAME
 from qxp.utils.config import update_nested_dict
 from qxp.utils.instruments import initialize_instruments_from_config, turn_off_instruments_from_config
 from qxp.utils.save import get_current_timestamp, get_experiment_params, get_latest_run_path, \
-    load_experiment, save_dict_to_db, make_experiment_save_path, save_dict_to_hdf5
+    make_experiment_save_path, save_dict_to_hdf5, load_dict_from_hdf5, datetime_from_timestamp
+from qxp.measurement_db.core.models import Cooldown, OpticalTable, ExperimentRun, Parameter, Measurement
 
 
 class BaseQuaExperiment(ABC):
     experiment_name = 'abstract_base_qua_experiment'
 
-    def __init__(self, simulate=False, do_fit=True, do_save=True, do_update_db=False):
+    def __init__(self, simulate=False, do_fit=True, do_save=True, do_update_db=False, comment=""):
         """ Initialize the experiment.
         Args:
               simulate (bool, optional): Whether to simulate the experiment.
@@ -25,6 +26,7 @@ class BaseQuaExperiment(ABC):
         self.do_fit = do_fit
         self.do_save = do_save
         self.do_update_db = do_update_db
+        self.comment = comment
         self.start_timestamp = None  # set in self.run()
         self.end_timestamp = None  # set in self.run()
         self.exp_config = {}  # set in self.configure()
@@ -33,6 +35,7 @@ class BaseQuaExperiment(ABC):
         self.data = {}  # returned by self.get_data()
         self.measured_params = {}  # returned by self.fit()
         self.save_path = None  # set in self.save()
+        self.experiment_run_id = None  # set in log_experiment_run_to_db()
 
     @abstractmethod
     def auto_set_exp_config(self):
@@ -101,12 +104,6 @@ class BaseQuaExperiment(ABC):
             job = qm.execute(prog)
             return job
 
-    def save_measured_params_to_db(self):
-        if self.measured_params:
-            save_dict_to_db(self.measured_params, self.start_timestamp, self.save_path)
-        else:
-            print("[!] No measured values to save to database. Is do_fit=True?")
-
     def save(self):
         """ Save the experiment parameters and data in the HDF5 format. """
         self.save_path = make_experiment_save_path(self.experiment_name, self.start_timestamp)
@@ -117,7 +114,39 @@ class BaseQuaExperiment(ABC):
         """ Load saved data. If path is None the latest run will be loaded. """
         if path is None:
             path = get_latest_run_path(self.experiment_name)
-        load_experiment(self, path)
+        data_dict = load_dict_from_hdf5(path)
+        for key, value in data_dict.items():
+            setattr(self, key, value)
+
+    def log_experiment_run_to_db(self):
+        """ Log the experiment run in the measurement database. """
+        cooldown = Cooldown.objects.get(chip__name=CHIP_NAME, number=COOLDOWN_NUMBER)
+        optical_table = OpticalTable.objects.filter(rack_name=RACK_NAME).latest('datetime')
+        experiment_run = ExperimentRun(
+            name=self.experiment_name,
+            datetime=datetime_from_timestamp(self.start_timestamp),
+            cooldown=cooldown,
+            optical_table=optical_table,
+            data_path=self.save_path,
+            comment=self.comment,
+        )
+        experiment_run.save()
+        self.experiment_run_id = experiment_run.id
+
+    def save_measured_params_to_db(self):
+        """ Save the measured parameters to the database. """
+        if self.measured_params:
+            for key, value in self.measured_params.items():
+                parameter = Parameter.objects.get_or_create(name=key)
+                experiment_run = ExperimentRun.objects.get(id=self.experiment_run_id)
+                measurement = Measurement(
+                    parameter=parameter,
+                    value=value,
+                    experiment_run=experiment_run,
+                )
+                measurement.save()
+        else:
+            print("[!] No measured values to save to database. Is do_fit=True?")
 
     def run(self):
         """ Run the experiment: set up, measure, analyze, plot and save. """
@@ -138,6 +167,7 @@ class BaseQuaExperiment(ABC):
             self.measured_params = self.fit()
         if self.do_save:
             self.save()
+            self.log_experiment_run_to_db()
         if self.do_update_db:
             self.save_measured_params_to_db()
 

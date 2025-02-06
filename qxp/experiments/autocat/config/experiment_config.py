@@ -10,6 +10,7 @@ from qxp.utils.waveforms import gaussian_shape
 BASE_SAVE_PATH = Path(r'D:\data\tunable_autocat')
 CHIP_NAME = 'RC-0008-01-B-top'
 COOLDOWN_NUMBER = 5
+RACK_NAME = 'Australie'
 
 # The experiment configuration is used to build the QUA configuration dictionary.
 EXP_CONFIG = {

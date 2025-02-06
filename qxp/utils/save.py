@@ -2,8 +2,8 @@ import inspect
 from datetime import datetime
 import h5py
 
-from qxp.config import COOLDOWN_NUMBER, COOLDOWN_SAVE_PATH, TIMESTAMP_FORMAT, CHIP_NAME
-from qxp.measurement_db.core.models import Parameter, Measurement, Cooldown, OpticalTable
+from qxp.config import COOLDOWN_SAVE_PATH, TIMESTAMP_FORMAT, CHIP_NAME
+from qxp.measurement_db.core.models import Measurement
 
 
 def get_current_timestamp():
@@ -111,27 +111,6 @@ def get_latest_run_path(experiment_name):
     return max(files, key=lambda x: datetime_from_timestamp(x.stem))
 
 
-def save_dict_to_db(dict_to_save, exp_timestamp, data_path):
-    """ Save dictionary to database.
-    Args:
-        dict_to_save: Dictionary to save.
-        exp_timestamp: Experiment self.start_timestamp.
-        data_path: Experiment self.save_path.
-    """
-    for key, value in dict_to_save.items():
-        parameter = Parameter.objects.get_or_create(name=key)
-        cooldown = Cooldown.objects.get(chip__name=CHIP_NAME, number=COOLDOWN_NUMBER)
-        optical_table = OpticalTable.objects.latest('datetime')
-        measurement = Measurement(
-            parameter=parameter,
-            value=value,
-            datetime=datetime_from_timestamp(exp_timestamp),
-            cooldown=cooldown,
-            optical_table=optical_table,
-            data_path=data_path,
-        )
-        measurement.save()
-
 def fetch_last_from_db(parameter_name):
     """ Fetch last saved measurement from database.
     Args:
@@ -139,9 +118,9 @@ def fetch_last_from_db(parameter_name):
     """
     try:
         measurement = Measurement.objects.filter(
-            cooldown__chip__name=CHIP_NAME,
+            experiment_run__cooldown__chip__name=CHIP_NAME,
             parameter__name=parameter_name
-        ).latest('datetime')
+        ).order_by('experiment_run__datetime').last()
     except Measurement.DoesNotExist:
         measurement = None
     return measurement

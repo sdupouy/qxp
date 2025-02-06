@@ -13,6 +13,7 @@ class Chip(models.Model):
 
 class OpticalTable(models.Model):
     datetime = models.DateTimeField(default=timezone.now)
+    rack_name = models.CharField(max_length=255)
     cabling = models.ImageField(upload_to='optical_tables/', null=True, blank=True)
     comment = models.TextField(blank=True)
 
@@ -41,10 +42,22 @@ class ChipElement(models.Model):
         return self.name
 
 
+class ExperimentRun(models.Model):
+    name = models.CharField(max_length=255)
+    datetime = models.DateTimeField(default=timezone.now)
+    cooldown = models.ForeignKey(Cooldown, on_delete=models.PROTECT)
+    optical_table = models.ForeignKey(OpticalTable, on_delete=models.PROTECT)
+    data_path = models.CharField(max_length=255)
+    comment = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Parameter(models.Model):
     name = models.CharField(max_length=255, unique=True)
     unit = models.CharField(max_length=255, blank=True)
-    chip_elements = models.ManyToManyField(ChipElement, null=True, blank=True)
+    chip_elements = models.ManyToManyField(ChipElement, blank=True)
     latex_notation = models.CharField(max_length=255, null=True, blank=True)
     comment = models.TextField(blank=True)
 
@@ -55,11 +68,9 @@ class Parameter(models.Model):
 class Measurement(models.Model):
     parameter = models.ForeignKey(Parameter, on_delete=models.PROTECT)
     value = models.FloatField()
-    datetime = models.DateTimeField(default=timezone.now)
-    cooldown = models.ForeignKey(Cooldown, on_delete=models.PROTECT)
-    optical_table = models.ForeignKey(OpticalTable, on_delete=models.PROTECT)
-    data_path = models.CharField(max_length=255)
+    uncertainty = models.FloatField(null=True, blank=True)
+    experiment_run = models.ForeignKey(ExperimentRun, on_delete=models.PROTECT)
     comment = models.TextField(blank=True)
 
     def __str__(self):
-        return f"{self.parameter.name} @ {self.datetime}"
+        return f"{self.parameter.name} @ {self.experiment_run.datetime}"
