@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qxp"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "django",
+    "qm-qua",
+    "qualib-tools",
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "pyvisa"
+]
+authors = [
+    {name = "Simon Dupouy", email = "simon.dupouy@gmail.com"},
+]
+description = "A Quantum Experimentation Platform."
+readme = "README.md"

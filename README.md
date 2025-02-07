@@ -1,4 +1,4 @@
-# Quantum Experiment Platform (qxp)
+# Quantum Experimentation Platform (qxp)
 
 This software aims at providing:
 - a way to automatize measurements on a Quantum Machines setup
