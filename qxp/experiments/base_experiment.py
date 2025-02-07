@@ -14,18 +14,11 @@ from qxp.measurement_db.core.models import Cooldown, OpticalTable, ExperimentRun
 class BaseQuaExperiment(ABC):
     experiment_name = 'abstract_base_qua_experiment'
 
-    def __init__(self, simulate=False, do_fit=True, do_save=True, do_update_db=False, comment=""):
+    def __init__(self, comment=""):
         """ Initialize the experiment.
         Args:
-              simulate (bool, optional): Whether to simulate the experiment.
-              do_fit (bool, optional): Whether to fit the experiment.
-              do_save (bool, optional): Whether to save the data.
-              do_update_db (bool, optional): Whether to update the calibration database.
+              comment: A comment that will be stored with the experiment run.
         """
-        self.simulate = simulate
-        self.do_fit = do_fit
-        self.do_save = do_save
-        self.do_update_db = do_update_db
         self.comment = comment
         self.start_timestamp = None  # set in self.run()
         self.end_timestamp = None  # set in self.run()
@@ -75,7 +68,7 @@ class BaseQuaExperiment(ABC):
     def turn_off_instruments(self):
         turn_off_instruments_from_config(self.instruments_config)
 
-    def run_qua_program(self, prog):
+    def run_qua_program(self, prog, simulate=False):
         # Open Communication with the QOP
         qmm = QuantumMachinesManager(host=QOP_IP, port=QOP_PORT, cluster_name=CLUSTER_NAME)
 
@@ -86,10 +79,11 @@ class BaseQuaExperiment(ABC):
                 / DEBUG_SCRIPTS_DIRECTORY
                 / f'{self.experiment_name}_{self.start_timestamp}.py'
         )
+        debug_script_path.parent.mkdir(parents=True, exist_ok=True)
         debug_script_path.write_text(debug_script)
 
         # Simulate or execute
-        if self.simulate:
+        if simulate:
             if 'simulate_duration' in self.exp_config:
                 simulate_duration = self.exp_config['simulate_duration']
             else:
@@ -109,6 +103,7 @@ class BaseQuaExperiment(ABC):
         self.save_path = make_experiment_save_path(self.experiment_name, self.start_timestamp)
         dict_to_save = get_experiment_params(self)
         save_dict_to_hdf5(dict_to_save, self.save_path)
+        print('[+] Saved experiment to', self.save_path)
 
     def load(self, path=None):
         """ Load saved data. If path is None the latest run will be loaded. """
@@ -131,13 +126,14 @@ class BaseQuaExperiment(ABC):
             comment=self.comment,
         )
         experiment_run.save()
+        print("[+] Logged experiment run to database")
         self.experiment_run_id = experiment_run.id
 
     def save_measured_params_to_db(self):
         """ Save the measured parameters to the database. """
         if self.measured_params:
             for key, value in self.measured_params.items():
-                parameter = Parameter.objects.get_or_create(name=key)
+                parameter = Parameter.objects.get_or_create(name=key)[0]
                 experiment_run = ExperimentRun.objects.get(id=self.experiment_run_id)
                 measurement = Measurement(
                     parameter=parameter,
@@ -145,15 +141,23 @@ class BaseQuaExperiment(ABC):
                     experiment_run=experiment_run,
                 )
                 measurement.save()
+            print("[+] Saved measured parameters to database")
         else:
             print("[!] No measured values to save to database. Is do_fit=True?")
 
-    def run(self):
-        """ Run the experiment: set up, measure, analyze, plot and save. """
+    def run(self, simulate=False, do_fit=True, do_save=True, do_update_db=False):
+        """ Run the experiment: set up, measure, analyze, plot and save.
+        Args:
+            simulate (bool): Simulate the QUA program instead of running it.
+            do_fit (bool): Whether to fit the data.
+            do_save (bool): Whether to save the data.
+            do_update_db (bool): Whether to update the database.
+        """
+        print('[+] Running', self.experiment_name)
         self.start_timestamp = get_current_timestamp()
         self.initialize_instruments()
         prog = self.get_qua_program()
-        job = self.run_qua_program(prog)
+        job = self.run_qua_program(prog, simulate)
         results = self.get_results(job)
 
         # do live plotting if the method is defined
@@ -163,12 +167,12 @@ class BaseQuaExperiment(ABC):
 
         self.data = self.get_data(results)
         self.end_timestamp = get_current_timestamp()
-        if self.do_fit:
+        if do_fit:
             self.measured_params = self.fit()
-        if self.do_save:
+        if do_save:
             self.save()
             self.log_experiment_run_to_db()
-        if self.do_update_db:
+        if do_update_db:
             self.save_measured_params_to_db()
 
     def configure(self, force_exp_config=None, force_instruments_config=None):
@@ -187,14 +191,19 @@ class BaseQuaExperiment(ABC):
             update_nested_dict(self.instruments_config, force_instruments_config)
         self.qua_config = get_qua_config(self.exp_config)
 
-    def configure_and_run(self, force_exp_config=None, force_instruments_config=None):
+    def configure_and_run(self, force_exp_config=None, force_instruments_config=None,
+                          simulate=False, do_fit=True, do_save=True, do_update_db=False):
         """ Automatically configure and run the experiment.
         Args:
             force_exp_config (dict, optional): Dictionary to override values of the experiment config.
             force_instruments_config (dict, optional): Dictionary to override values of the instruments config.
+            simulate (bool): Simulate the QUA program instead of running it.
+            do_fit (bool): Whether to fit the data.
+            do_save (bool): Whether to save the data.
+            do_update_db (bool): Whether to update the database.
         """
         self.configure(force_exp_config, force_instruments_config)
-        self.run()
+        self.run(simulate=simulate, do_fit=do_fit, do_save=do_save, do_update_db=do_update_db)
 
     def __str__(self):
         return f'{self.experiment_name}__{self.start_timestamp}'

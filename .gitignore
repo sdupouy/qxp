@@ -2,3 +2,4 @@
 qxp/measurement_db/db.sqlite3
 qxp/measurement_db/media/*
 **/__pycache__/
+qxp.egg-info/

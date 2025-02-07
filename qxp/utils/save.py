@@ -1,6 +1,7 @@
 import inspect
 from datetime import datetime
 import h5py
+import json
 
 from qxp.config import COOLDOWN_SAVE_PATH, TIMESTAMP_FORMAT, CHIP_NAME
 from qxp.measurement_db.core.models import Measurement
@@ -22,17 +23,7 @@ def get_experiment_params(experiment):
         experiment: Experiment object.
     """
     def filter_key(k):
-        no_save_keys = [  # These won't be saved
-            'simulate',
-            'do_fit',
-            'save_data',
-            'update_calibration_db'
-        ]
-        if k.startswith('__'):
-            return False
-        if k in no_save_keys:
-            return False
-        return True
+        return not k.startswith('_')
     experiment_params = {
         k: v for k, v in inspect.getmembers(experiment, lambda a: not callable(a)) if filter_key(k)
     }
@@ -48,7 +39,7 @@ def make_experiment_save_path(experiment_name, timestamp):
     save_path = COOLDOWN_SAVE_PATH / experiment_name
     save_path.mkdir(parents=True, exist_ok=True)
     save_path = save_path.joinpath(timestamp).with_suffix('.h5')
-    return save_path
+    return str(save_path)  # needs to be a string for HDF5 saving
 
 
 def save_dict_to_hdf5(dict_to_save, save_path):
@@ -59,12 +50,15 @@ def save_dict_to_hdf5(dict_to_save, save_path):
     """
     def _recursively_save_dict(hdf_group, dict_to_save):
         for key, value in dict_to_save.items():
-            if isinstance(value, dict):
-                hdf_subgroup = hdf_group.create_group(key)
+            # We store the qua_config as a string as it contains lists of dicts which aren't HDF5-friendly
+            if key == "qua_config":
+                hdf_group.create_dataset(key, data=json.dumps(value))
+            elif isinstance(value, dict):
+                hdf_subgroup = hdf_group.create_group(str(key))
                 _recursively_save_dict(hdf_subgroup, value)
-            elif isinstance(value, str):
+            elif isinstance(value, (str, int, float, bool)):
                 hdf_group.attrs[key] = value  # Save strings as attributes
-            else:
+            elif value is not None:
                 hdf_group.create_dataset(key, data=value)  # Save other data types as datasets
 
     with h5py.File(save_path, 'x') as hdf_file:  # Create the file and error if exists
@@ -79,7 +73,10 @@ def load_dict_from_hdf5(path):
     def _recursively_load_as_dict(hdf_group):
         data_dict = {}
         for key, value in hdf_group.items():
-            if isinstance(value, h5py.Group):
+            # The qua_config is stored as a string
+            if key == "qua_config":
+                data_dict[key] = json.loads(value[()])
+            elif isinstance(value, h5py.Group):
                 # If it's a group, recursively process it
                 data_dict[key] = _recursively_load_as_dict(value)
             elif isinstance(value, h5py.Dataset):

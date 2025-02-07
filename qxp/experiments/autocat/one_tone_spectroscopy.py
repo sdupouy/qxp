@@ -26,7 +26,7 @@ class OneToneSpectroscopy(BaseQuaExperiment):
             excite_transmon: Whether to excite the transmon before readout.
         """
         super().__init__(**kwargs)
-        self.i_freq = np.linspace(20, 100, 101) * u.MHz if i_freq is None else i_freq
+        self.i_freq = np.linspace(20, 100, 1001) * u.MHz if i_freq is None else i_freq
         self.n_avg = n_avg
         self.excite_transmon = excite_transmon
 

@@ -7,7 +7,7 @@ from qxp.utils.qua import iq_imbalance_k_theta
 from qxp.utils.waveforms import gaussian_shape
 
 
-BASE_SAVE_PATH = Path(r'D:\data\tunable_autocat')
+BASE_SAVE_PATH = Path(r'D:\data\tunable_autocat_qxp')
 CHIP_NAME = 'RC-0008-01-B-top'
 COOLDOWN_NUMBER = 5
 RACK_NAME = 'Australie'
@@ -16,7 +16,9 @@ RACK_NAME = 'Australie'
 EXP_CONFIG = {
     "ro_resonator": {
         "lo": "ro_resonator_lo",
-        "pulse_length": 3000 * u.ns,
+        "resonance_freq": 6.93874 * u.GHz,
+        "i_freq": 60 * u.MHz,
+        "pulse_length": int(3000 * u.ns),
         "pulse_amp": 0.05,
 
         "im_frequency": 61 * u.MHz,
@@ -29,7 +31,7 @@ EXP_CONFIG = {
     },
 
     "transmon": {
-        "pulse_length": 1000 * u.ns,
+        "pulse_length": int(1000 * u.ns),
         "pulse_amp": 0.005,
 
         "lo_channel": 2,
@@ -41,7 +43,7 @@ EXP_CONFIG = {
     },
 
     "memory": {
-        "pulse_length": 100 * u.ns,
+        "pulse_length": int(100 * u.ns),
         "const_pulse_amp": 0.02,
         "gaussian_pulse_amp": 0.2,
 

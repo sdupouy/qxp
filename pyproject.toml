@@ -9,11 +9,12 @@ requires-python = ">=3.11"
 dependencies = [
     "django",
     "qm-qua",
-    "qualib-tools",
+    "qualang-tools",
     "numpy",
     "scipy",
     "matplotlib",
-    "pyvisa"
+    "pyvisa",
+    "h5py"
 ]
 authors = [
     {name = "Simon Dupouy", email = "simon.dupouy@gmail.com"},

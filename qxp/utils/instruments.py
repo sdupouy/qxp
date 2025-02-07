@@ -10,7 +10,7 @@ from qxp.instruments.BN103 import BN103
 def initialize_apuasyn20(config):
     instrument = APUASYN20(visa_address=config['address'])
     instrument.set_frequency_hz(channel=config['channel'], frequency_hz=config['frequency'])
-    instrument.set_power_dbm(channel=config['channel'], power_dbm=config['power'])
+    instrument.set_power_dbm(channel=config['channel'], power_dbm=float(config['power']))
     instrument.set_output(channel=config['channel'], output=bool(config['output']))
     instrument.close()
 
@@ -18,7 +18,7 @@ def initialize_apuasyn20(config):
 def initialize_aspin20(config):
     instrument = ASPIN20G(visa_address=config['address'])
     instrument.set_frequency_hz(frequency_hz=config['frequency'])
-    instrument.set_power_dbm(power_dbm=config['power'])
+    instrument.set_power_dbm(power_dbm=float(config['power']))
     instrument.set_output(output=bool(config['output']))
     instrument.close()
 

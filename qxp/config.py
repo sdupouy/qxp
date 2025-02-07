@@ -9,9 +9,10 @@ from pathlib import Path
 from qxp.utils.config import load_experiment_config_module
 
 
-EXPERIMENT_CONFIG_PATH = Path('experiments/autocat/config/experiment_config.py')
+BASE_DIR = Path(__file__).resolve().parent
+EXPERIMENT_CONFIG_PATH = BASE_DIR / 'experiments/autocat/config/experiment_config.py'
 DEBUG_SCRIPTS_DIRECTORY = Path('debug_scripts')
-TIMESTAMP_FORMAT = "%d-%m-%Y_%Hh%M:%S"
+TIMESTAMP_FORMAT = "%d-%m-%Y_%Hh%Mm%S"
 
 # OPX connection
 CLUSTER_NAME = 'Cluster_1'
@@ -31,4 +32,4 @@ RACK_NAME = experiment_config.RACK_NAME
 EXP_CONFIG = experiment_config.EXP_CONFIG
 INSTRUMENTS_CONFIG = experiment_config.INSTRUMENTS_CONFIG
 
-COOLDOWN_SAVE_PATH = Path(BASE_SAVE_PATH, CHIP_NAME, COOLDOWN_NUMBER)
+COOLDOWN_SAVE_PATH = Path(BASE_SAVE_PATH, CHIP_NAME, f'cooldown_{COOLDOWN_NUMBER}')

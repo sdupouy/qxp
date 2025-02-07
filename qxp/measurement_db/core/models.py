@@ -18,7 +18,7 @@ class OpticalTable(models.Model):
     comment = models.TextField(blank=True)
 
     def __str__(self):
-        return self.datetime
+        return f'{self.rack_name} ({str(self.datetime)})'
 
 
 class Cooldown(models.Model):
@@ -29,7 +29,7 @@ class Cooldown(models.Model):
     comment = models.TextField(blank=True)
 
     def __str__(self):
-        return self.datetime
+        return f'{self.chip.name} # {self.number} ({str(self.datetime)})'
 
     class Meta:
         unique_together = [['number', 'chip']]
@@ -51,7 +51,7 @@ class ExperimentRun(models.Model):
     comment = models.TextField(blank=True)
 
     def __str__(self):
-        return self.name
+        return f'{self.name} of {self.cooldown.chip.name} ({str(self.datetime)})'
 
 
 class Parameter(models.Model):
