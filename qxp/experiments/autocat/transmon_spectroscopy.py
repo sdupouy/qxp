@@ -7,7 +7,6 @@ from qualang_tools.results import progress_counter, fetching_tool
 from qualang_tools.loops import from_array
 from qualang_tools.units import unit
 from qualang_tools.plot import interrupt_on_close
-from qualang_tools.plot.fitting import Fit
 u = unit()
 
 from qxp.experiments.base_experiment import BaseQuaExperiment
@@ -16,70 +15,74 @@ from qxp.experiments.autocat.config import autoconfig
 
 
 class OneToneSpectroscopy(BaseQuaExperiment):
-    experiment_name = 'one_tone_spectroscopy'
+    experiment_name = 'transmon_spectroscopy'
+    description = """A two-tone spectroscopy of the readout transmon."""
 
-    def __init__(self, i_freq=None, n_avg=2000, excite_transmon=False, **kwargs):
+    def __init__(self, i_freqs=None, pulse_type='saturation', n_avg=2000, **kwargs):
         """
         Args:
-            i_freq: An array of the intermediate frequencies to use.
+            i_freqs: An array of the intermediate frequencies to use.
+            pulse_type: The type of pulse ('pi' or 'saturation').
             n_avg: The averaging.
-            excite_transmon: Whether to excite the transmon before readout.
         """
         super().__init__(**kwargs)
-        self.i_freq = np.linspace(20, 100, 1001) * u.MHz if i_freq is None else i_freq
+        self.i_freqs = np.linspace(20, 100, 1001) * u.MHz if i_freqs is None else i_freqs
+        self.pulse_type = pulse_type
         self.n_avg = n_avg
-        self.excite_transmon = excite_transmon
 
     def auto_set_exp_config(self):
         autoconfig.auto_set_exp_config(self.exp_config)
 
     def auto_set_instruments_config(self):
         autoconfig.auto_set_instruments_config(self.instruments_config, self.exp_config)
-        
-        # set the readout resonator LO
-        resonance_freq = self.exp_config['ro_resonator']['resonance_freq']
-        lo_freq = resonance_freq + (self.i_freq[0] + self.i_freq[-1]) // 2 + self.i_freq[0]
-        self.instruments_config['ro_resonator_lo']['frequency'] = lo_freq
+
+        # set the transmon LO
+        resonance_freq = self.exp_config['transmon']['resonance_freq']
+        lo_freq = resonance_freq + (self.i_freqs[0] + self.i_freqs[-1]) // 2 + self.i_freqs[0]
+        self.instruments_config['transmon_lo']['frequency'] = lo_freq
 
     def get_qua_program(self):
         """ QUA program """
-        ro_reset_time = self.exp_config['ro_resonator']['reset_time']
+        transmon_reset_time = self.exp_config['transmon']['reset_time']
         with program() as prog:
             n = declare(int)  # QUA variable for the averaging loop
-            f = declare(int)  # QUA variable for the readout frequency
-            I = declare(fixed)  # QUA variable for the measured 'I' quadrature
-            Q = declare(fixed)  # QUA variable for the measured 'Q' quadrature
-            I_st = declare_stream()  # Stream for the 'I' quadrature
-            Q_st = declare_stream()  # Stream for the 'Q' quadrature
+            f = declare(int)  # QUA variable for the transmon frequency
+            i = declare(fixed)  # QUA variable for the measured 'I' quadrature
+            q = declare(fixed)  # QUA variable for the measured 'Q' quadrature
+            i_st = declare_stream()  # Stream for the 'I' quadrature
+            q_st = declare_stream()  # Stream for the 'Q' quadrature
             n_st = declare_stream()  # Stream for the averaging iteration 'n'
 
             with for_(n, 0, n < self.n_avg, n + 1):
-                with for_(*from_array(f, self.i_freq)):
-                    update_frequency("readout_resonator", f)
+                with for_(*from_array(f, self.i_freqs)):
+                    update_frequency("transmon", f)
 
-                    if self.excite_transmon:
-                        play("transmon_pulse", "transmon")
-                        align()
+                    align()
+                    if self.pulse_type == 'saturation':
+                        play("transmon_saturation", "transmon")
+                    elif self.pulse_type == 'pi':
+                        play("transmon_pi", "transmon")
 
+                    align("transmon", "ro_resonator")
                     measure(
                         "readout",
-                        "readout_resonator",
+                        "ro_resonator",
                         None,
-                        demod.full("sin", I),
-                        demod.full("cos", Q),
+                        demod.full("sin", i),
+                        demod.full("cos", q),
                     )
-                    wait(u.to_clock_cycles(ro_reset_time), "readout_resonator")
+                    # Wait for the transmon to decay to the ground state
+                    wait(u.to_clock_cycles(transmon_reset_time),"ro_resonator")
 
-                    save(I, I_st)
-                    save(Q, Q_st)
+                    save(i, i_st)
+                    save(q, q_st)
 
                 # Save the averaging iteration to get the progress bar
                 save(n, n_st)
 
             with stream_processing():
-                # Cast the data into a 1D vector, average the 1D vectors together and store the results on the OPX processor
-                I_st.buffer(len(self.i_freq)).average().save("I")
-                Q_st.buffer(len(self.i_freq)).average().save("Q")
+                i_st.buffer(len(self.i_freqs)).average().save("I")
+                q_st.buffer(len(self.i_freqs)).average().save("Q")
                 n_st.save("iteration")
 
         return prog
@@ -89,7 +92,7 @@ class OneToneSpectroscopy(BaseQuaExperiment):
 
     def get_data(self, results):
         i_rawdata, q_rawdata, iteration = results.fetch_all()
-        readout_pulse_length = self.exp_config['ro_resonator']['pulse_length']
+        readout_pulse_length = self.exp_config['transmon'][f'{self.pulse_type}_pulse_length']
         iq_data = u.demod2volts(i_rawdata + 1j * q_rawdata, readout_pulse_length, single_demod=True)
         data = {
             'iq_data': iq_data,
@@ -98,18 +101,18 @@ class OneToneSpectroscopy(BaseQuaExperiment):
         return data
 
     def live_plotting(self, job, results):
-        lo = self.exp_config['ro_resonator']['lo']
+        lo = self.exp_config['transmon']['lo']
         lo_freq = self.instruments_config[lo]['frequency']
-        sideband = self.exp_config['ro_resonator']['sideband']
-        r_freq = lo_freq + sideband * self.i_freq
+        sideband = self.exp_config['transmon']['sideband']
+        r_freqs = lo_freq + sideband * self.i_freqs
 
         fig, axs = plt.subplots(2, 1, sharex=True, tight_layout=True, figsize=(6, 8))
         interrupt_on_close(fig, job)  # Interrupt the job when closing the figure
 
-        fig.suptitle(f"Resonator spectroscopy - LO = {lo_freq / u.GHz} GHz")
+        fig.suptitle(f"Transmon spectroscopy - LO = {lo_freq / u.GHz} GHz")
         axs[0].set_ylabel(r"$R=\sqrt{I^2 + Q^2}$ (V)")
-        axs[1].set_ylabel("Phase (rad)")
-        axs[1].set_xlabel("Readout pulse frequency (Hz)")
+        axs[1].set_ylabel("phase (rad)")
+        axs[1].set_xlabel("frequency (MHz)")
         fig.canvas.manager.set_window_title(f'{self.experiment_name}: {self.start_timestamp}')
 
         while results.is_processing():
@@ -122,24 +125,24 @@ class OneToneSpectroscopy(BaseQuaExperiment):
 
             # Plot the results
             clean_axes(axs)
-            axs[0].plot(r_freq, amplitude, ".")
-            axs[1].plot(r_freq, unwrapped_phase, ".")
+            axs[0].plot(r_freqs / u.MHz, amplitude, ".")
+            axs[1].plot(r_freqs / u.MHz, unwrapped_phase, ".")
 
             adjust_axes_limits(axs)
             plt.pause(0.1)
             progress_counter(data['iteration'], self.n_avg, start_time=results.get_start_time())  # progress bar
 
     def plot(self):
-        lo = self.exp_config['ro_resonator']['lo']
+        lo = self.exp_config['transmon']['lo']
         lo_freq = self.instruments_config[lo]['frequency']
-        sideband = self.exp_config['ro_resonator']['sideband']
-        r_freq = (lo_freq + sideband * self.i_freq) / u.MHz
+        sideband = self.exp_config['transmon']['sideband']
+        r_freqs = lo_freq + sideband * self.i_freqs
 
         fig, axs = plt.subplots(2, 1, sharex=True, tight_layout=True, figsize=(6, 8))
-        fig.suptitle(f"Resonator spectroscopy")
+        fig.suptitle(f"Transmon spectroscopy")
         axs[0].set_ylabel(r"$R=\sqrt{I^2 + Q^2}$ (V)")
-        axs[1].set_ylabel("Phase (rad)")
-        axs[1].set_xlabel("Readout pulse frequency (MHz)")
+        axs[1].set_ylabel("phase (rad)")
+        axs[1].set_xlabel("frequency (MHz)")
 
         iq_data = self.data['iq_data']
         amplitude = np.abs(iq_data)  # Amplitude
@@ -147,27 +150,25 @@ class OneToneSpectroscopy(BaseQuaExperiment):
         unwrapped_phase = signal.detrend(np.unwrap(phase))
 
         # Plot results
-        axs[0].plot(r_freq, amplitude, ".", label="Data")
-        axs[1].plot(r_freq, unwrapped_phase, ".")
+        axs[0].plot(r_freqs / u.MHz, amplitude, ".", label="Data")
+        axs[1].plot(r_freqs / u.MHz, unwrapped_phase, ".")
         return fig
 
     def fit(self, fig=None):
-        lo = self.exp_config['ro_resonator']['lo']
+        lo = self.exp_config['transmon']['lo']
         lo_freq = self.instruments_config[lo]['frequency']
-        sideband = self.exp_config['ro_resonator']['sideband']
-        r_freq = lo_freq + sideband * self.i_freq
+        sideband = self.exp_config['transmon']['sideband']
+        r_freqs = lo_freq + sideband * self.i_freqs
 
-        fit = Fit().reflection_resonator_spectroscopy(r_freq, np.abs(self.data['iq_data']))
+        raise NotImplementedError  # TODO
 
         print(f"Resonance frequency = {fit['f'][0] / u.GHz:.3f} GHz")
-        print(f"Kappa = {fit['k'][0] / u.MHz:.3f} MHz")
 
         if fig is not None:
             axs = fig.axes
-            axs[0].plot(r_freq, fit['fit_func'](r_freq), ".", label="Fit")
+            axs[0].plot(r_freqs, ..., ".", label="Fit")
             axs[0].legend()
 
         return {
-            'readout_resonator_resonance_frequency': fit['f'][0],
-            'readout_resonator_kappa': fit['k'][0],
+            'transmon_resonance_frequency': fit['f'][0],
         }

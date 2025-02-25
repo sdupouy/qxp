@@ -13,33 +13,34 @@ COOLDOWN_NUMBER = 5
 RACK_NAME = 'Australie'
 
 # The experiment configuration is used to build the QUA configuration dictionary.
+# These parameters provide default values that can be overridden by database values.
 EXP_CONFIG = {
     "ro_resonator": {
         "lo": "ro_resonator_lo",
-        "resonance_freq": 6.93874 * u.GHz,
         "i_freq": 60 * u.MHz,
+        "sideband": -1,
+
+        "resonance_freq": 6.93874 * u.GHz,
         "pulse_length": int(3000 * u.ns),
         "pulse_amp": 0.05,
 
-        "im_frequency": 61 * u.MHz,
-        "sideband": -1,
-
         "time_of_flight": 360 * u.ns,
         "readout_phase": 0 * 2*np.pi,
-
         "reset_time": 5000 * u.ns
     },
 
     "transmon": {
-        "pulse_length": int(1000 * u.ns),
-        "pulse_amp": 0.005,
+        "resonance_freq": 2.6922 * u.GHz,
+        "pi_pulse_length": int(1000 * u.ns),
+        "pi_pulse_amp": 0.005,
+        "saturation_pulse_length": int(1000 * u.ns),
+        "saturation_pulse_amp": 0.005,
 
-        "lo_channel": 2,
-        "lo_output": True,
-        "lo_power": 15,  # dBm
-        "lo_frequency": 2.7822 * u.GHz,
-        "im_frequency": 90 * u.MHz,
+        "lo": "transmon_lo",
+        "i_freq": 90 * u.MHz,
         "sideband": -1,
+
+        "reset_time": 100_000 * u.ns,
     },
 
     "memory": {
@@ -138,7 +139,7 @@ def get_qua_config(params):
         },
 
         'elements': {
-            'readout_resonator': {
+            'ro_resonator': {
                 'singleInput': {
                     'port': ('con1', 1),
                 },
@@ -154,18 +155,18 @@ def get_qua_config(params):
             },
 
             'transmon': {
-                "singleInput": {
+                'singleInput': {
                     'port': ('con1', 2),
                 },
                 'intermediate_frequency': params['transmon']['im_frequency'],
                 'operations': {
-                    'transmon_pulse': 'transmon_pulse',
-                    'transmon_const': 'transmon_const',
+                    'transmon_pi': 'transmon_pi',
+                    'transmon_saturation': 'transmon_saturation',
                 }
             },
 
             'memory': {
-                "mixInputs": {
+                'mixInputs': {
                     "I": ('con1', 3),
                     "Q": ('con1', 4),
                     "lo_frequency": params['memory']['lo_frequency'],
@@ -186,7 +187,7 @@ def get_qua_config(params):
         },
 
         'mixers': {
-            "memory_mixer": [
+            'memory_mixer': [
                 {
                     "intermediate_frequency": params['memory']['im_frequency'],
                     "lo_frequency": params['memory']['lo_frequency'],
@@ -210,19 +211,19 @@ def get_qua_config(params):
                 "digital_marker": "ON",
             },
 
-            'transmon_pulse': {
+            'transmon_pi': {
                 'operation': 'control',
                 'length': params['transmon']['pulse_length'],
                 'waveforms': {
-                    'single': 'transmon_wave',
+                    'single': 'transmon_pi_wave',
                 }
             },
 
-            'transmon_const': {
+            'transmon_saturation': {
                 'operation': 'control',
                 'length': params['transmon']['pulse_length'],
                 'waveforms': {
-                    'single': 'transmon_const_wave',
+                    'single': 'transmon_saturation_wave',
                 }
             },
 
@@ -264,7 +265,7 @@ def get_qua_config(params):
                 'sample': 0
             },
 
-            'transmon_wave': {
+            'transmon_pi_wave': {
                 'type': 'arbitrary',
                 'samples': gaussian_shape(params['transmon']['pulse_amp'],
                                           params['transmon']['pulse_length'],
@@ -285,7 +286,7 @@ def get_qua_config(params):
                 'sample': params['memory']['const_pulse_amp'],
             },
 
-            'transmon_const_wave': {
+            'transmon_saturation_wave': {
                 'type': 'constant',
                 'sample': params['transmon']['pulse_amp'],
             },

@@ -16,4 +16,15 @@ This software aims at providing:
 
 ## TODO list
 - create templates for the measurement database
+- save the code of the experiment class with the data
 - implement other experiments
+    - time of flight
+    - readout frequency optimization
+    - readout amplitude optimization
+    - readout duration optimization
+    - readout weights optimization
+    - ro resonator spectroscopy lo sweep
+    - transmon spectroscopy lo sweep
+    - T1
+    - Ramsey
+    - T2 echo

@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+import sys
+import threading
 import matplotlib.pyplot as plt
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
 
@@ -102,6 +104,15 @@ class BaseQuaExperiment(ABC):
         """ Save the experiment parameters and data in the HDF5 format. """
         self.save_path = make_experiment_save_path(self.experiment_name, self.start_timestamp)
         dict_to_save = get_experiment_params(self)
+
+        # Save the code of the experiment module
+        module_name = self.__class__.__module__
+        module = sys.modules.get(module_name)
+        if module and hasattr(module, '__file__'):
+            with open(module.__file__, 'r') as f:
+                experiment_code = f.read()
+        dict_to_save['experiment_code'] = experiment_code
+
         save_dict_to_hdf5(dict_to_save, self.save_path)
         print('[+] Saved experiment to', self.save_path)
 
@@ -161,9 +172,20 @@ class BaseQuaExperiment(ABC):
         results = self.get_results(job)
 
         # do live plotting if the method is defined
+        live_plotting_thread = None
         live_plotting = getattr(self, 'live_plotting', None)
         if callable(live_plotting):
-            live_plotting(job, results)
+            live_plotting_thread = threading.Thread(target=live_plotting, args=(job, results), daemon=True)
+            print('[+] Starting live plotting thread')
+            live_plotting_thread.start()
+
+        # manage job pauses (run outer loops) if the method is defined
+        manage_job_pauses = getattr(self, 'manage_job_pauses', None)
+        if callable(manage_job_pauses):
+            manage_job_pauses(job, results)
+
+        if live_plotting_thread:
+            live_plotting_thread.join()  # wait for the thread to terminate (normally when the job finished processing)
 
         self.data = self.get_data(results)
         self.end_timestamp = get_current_timestamp()
