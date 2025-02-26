@@ -11,7 +11,9 @@ from qxp.utils.config import load_experiment_config_module
 
 BASE_DIR = Path(__file__).resolve().parent
 EXPERIMENT_CONFIG_PATH = BASE_DIR / 'experiments/autocat/config/experiment_config.py'
-DEBUG_SCRIPTS_DIRECTORY = Path('debug_scripts')
+DATA_DIRNAME = 'data'
+DEBUG_SCRIPTS_DIRNAME = 'debug_scripts'
+FIGURES_DIRNAME = 'figures'
 TIMESTAMP_FORMAT = "%d-%m-%Y_%Hh%Mm%S"
 
 # OPX connection

@@ -3,7 +3,7 @@ from datetime import datetime
 import h5py
 import json
 
-from qxp.config import COOLDOWN_SAVE_PATH, TIMESTAMP_FORMAT, CHIP_NAME
+from qxp.config import COOLDOWN_SAVE_PATH, TIMESTAMP_FORMAT, CHIP_NAME, DATA_DIRNAME
 from qxp.measurement_db.core.models import Measurement
 
 
@@ -36,7 +36,7 @@ def make_experiment_save_path(experiment_name, timestamp):
         experiment_name: Experiment name.
         timestamp: Experiment self.start_timestamp.
     """
-    save_path = COOLDOWN_SAVE_PATH / experiment_name
+    save_path = COOLDOWN_SAVE_PATH / DATA_DIRNAME / experiment_name
     save_path.mkdir(parents=True, exist_ok=True)
     save_path = save_path.joinpath(timestamp).with_suffix('.h5')
     return str(save_path)  # needs to be a string for HDF5 saving

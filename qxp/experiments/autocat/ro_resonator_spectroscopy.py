@@ -1,13 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal
+from resonator import reflection, background
 
 from qm.qua import *
-from qualang_tools.results import progress_counter, fetching_tool
+from qualang_tools.results import progress_counter
 from qualang_tools.loops import from_array
 from qualang_tools.units import unit
 from qualang_tools.plot import interrupt_on_close
-from qualang_tools.plot.fitting import Fit
 u = unit()
 
 from qxp.experiments.base_experiment import BaseQuaExperiment
@@ -85,11 +85,11 @@ class OneToneSpectroscopy(BaseQuaExperiment):
 
         return prog
 
-    def get_results(self, job):
-        return fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+    def get_data(self, result_handles):
+        i_rawdata = result_handles.get("I").fetch_all()
+        q_rawdata = result_handles.get("Q").fetch_all()
+        iteration = result_handles.get("iteration").fetch_all()
 
-    def get_data(self, results):
-        i_rawdata, q_rawdata, iteration = results.fetch_all()
         readout_pulse_length = self.exp_config['ro_resonator']['pulse_length']
         iq_data = u.demod2volts(i_rawdata + 1j * q_rawdata, readout_pulse_length, single_demod=True)
         data = {
@@ -98,7 +98,7 @@ class OneToneSpectroscopy(BaseQuaExperiment):
         }
         return data
 
-    def live_plotting(self, job, results):
+    def live_plotting(self, job, result_handles):
         lo = self.exp_config['ro_resonator']['lo']
         lo_freq = self.instruments_config[lo]['frequency']
         sideband = self.exp_config['ro_resonator']['sideband']
@@ -113,9 +113,9 @@ class OneToneSpectroscopy(BaseQuaExperiment):
         axs[1].set_xlabel("frequency (MHz)")
         fig.canvas.manager.set_window_title(f'{self.experiment_name}: {self.start_timestamp}')
 
-        while results.is_processing():
+        while result_handles.is_processing():
             # Process the data
-            data = self.get_data(results)
+            data = self.get_data(result_handles)
             iq_data = data['iq_data']
             amplitude = np.abs(iq_data)  # Amplitude
             phase = np.angle(iq_data)  # Phase
@@ -128,7 +128,31 @@ class OneToneSpectroscopy(BaseQuaExperiment):
 
             adjust_axes_limits(axs)
             plt.pause(0.1)
-            progress_counter(data['iteration'], self.n_avg, start_time=results.get_start_time())  # progress bar
+            progress_counter(data['iteration'], self.n_avg)  # progress bar
+
+    def fit(self):
+        lo = self.exp_config['ro_resonator']['lo']
+        lo_freq = self.instruments_config[lo]['frequency']
+        sideband = self.exp_config['ro_resonator']['sideband']
+        r_freqs = lo_freq + sideband * self.i_freqs
+
+        background_model = background.MagnitudeSlopeOffsetPhaseDelay()
+        fit = reflection.LinearReflectionFitter(
+            frequency=r_freqs,
+            data=self.data['iq_data'],
+            background_model=background_model
+        )
+        self.fit_params = None  # TODO: currently fit is not serializable to HDF5
+
+        print(f"Resonance frequency = {fit.resonance_frequency / u.GHz:.3f} GHz")
+        print(f"Kappa_coupling = {fit.coupling_energy_decay_rate / u.MHz:.3f} MHz")
+        print(f"Kappa_internal = {fit.internal_energy_decay_rate / u.MHz:.3f} MHz")
+
+        return {
+            'ro_resonator_resonance_frequency': fit.resonance_frequency,
+            'ro_resonator_kappa_coupling': fit.coupling_energy_decay_rate,
+            'ro_resonator_kappa_internal': fit.internal_energy_decay_rate,
+        }
 
     def plot(self):
         lo = self.exp_config['ro_resonator']['lo']
@@ -150,25 +174,9 @@ class OneToneSpectroscopy(BaseQuaExperiment):
         # Plot results
         axs[0].plot(r_freqs / u.MHz, amplitude, ".", label="Data")
         axs[1].plot(r_freqs / u.MHz, unwrapped_phase, ".")
+
+        if self.fit_params:
+            # TODO
+            pass
+
         return fig
-
-    def fit(self, fig=None):
-        lo = self.exp_config['ro_resonator']['lo']
-        lo_freq = self.instruments_config[lo]['frequency']
-        sideband = self.exp_config['ro_resonator']['sideband']
-        r_freqs = lo_freq + sideband * self.i_freqs
-
-        fit = Fit().reflection_resonator_spectroscopy(r_freqs, np.abs(self.data['iq_data']))
-
-        print(f"Resonance frequency = {fit['f'][0] / u.GHz:.3f} GHz")
-        print(f"Kappa = {fit['k'][0] / u.MHz:.3f} MHz")
-
-        if fig is not None:
-            axs = fig.axes
-            axs[0].plot(r_freqs, fit['fit_func'](r_freqs), ".", label="Fit")
-            axs[0].legend()
-
-        return {
-            'ro_resonator_resonance_frequency': fit['f'][0],
-            'ro_resonator_kappa': fit['k'][0],
-        }

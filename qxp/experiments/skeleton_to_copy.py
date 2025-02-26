@@ -5,7 +5,7 @@ This file is a skeleton for an experiment class, to copy and fill!
 import matplotlib.pyplot as plt
 
 from qm.qua import *
-from qualang_tools.results import progress_counter, fetching_tool
+from qualang_tools.results import progress_counter
 from qualang_tools.units import unit
 from qualang_tools.plot import interrupt_on_close
 u = unit()
@@ -16,6 +16,7 @@ from qxp.utils.plot import clean_axes, adjust_axes_limits
 
 class SkeletonExperiment(BaseQuaExperiment):
     experiment_name = 'skeleton_experiment'
+    description = """Short description."""
 
     def __init__(self, param, **kwargs):
         """
@@ -44,11 +45,11 @@ class SkeletonExperiment(BaseQuaExperiment):
 
         return prog
 
-    def get_results(self, job):
-        return fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
+    def get_data(self, result_handles):
+        i_rawdata = result_handles.get("I").fetch_all()
+        q_rawdata = result_handles.get("Q").fetch_all()
+        iteration = result_handles.get("iteration").fetch_all()
 
-    def get_data(self, results):
-        i_rawdata, q_rawdata, iteration = results.fetch_all()
         readout_pulse_length = self.exp_config['readout']['pulse_length']
         iq_data = u.demod2volts(i_rawdata + 1j * q_rawdata, readout_pulse_length, single_demod=True)
         data = {
@@ -57,7 +58,7 @@ class SkeletonExperiment(BaseQuaExperiment):
         }
         return data
 
-    def live_plotting(self, job, results):
+    def live_plotting(self, job, result_handles):
         fig, axs = plt.subplots()
         interrupt_on_close(fig, job)  # Interrupt the job when closing the figure
 
@@ -65,9 +66,9 @@ class SkeletonExperiment(BaseQuaExperiment):
         ...
         fig.canvas.manager.set_window_title(f'{self.experiment_name}: {self.start_timestamp}')
 
-        while results.is_processing():
+        while result_handles.is_processing():
             # Process the data
-            data = self.get_data(results)
+            data = self.get_data(result_handles)
             ...
 
             # Plot the results
@@ -76,25 +77,21 @@ class SkeletonExperiment(BaseQuaExperiment):
 
             adjust_axes_limits(axs)
             plt.pause(0.1)
-            progress_counter(data['iteration'], self.n_avg, start_time=results.get_start_time())  # progress bar
+            progress_counter(data['iteration'], self.n_avg)  # progress bar
+
+    def fit(self):
+        # DO THE FIT
+        ...
+        self.fit_params = ...  # to be used by self.plot
+
+        # PRINT FITTED PARAMETERS
+        ...
+
+        return {
+            # KEY: VALUE,
+        }
 
     def plot(self):
         fig, axs = plt.subplots()
         ...
         return fig
-
-    def fit(self, fig=None):
-        # DO THE FIT
-        ...
-
-        # PRINT FITTED PARAMETERS
-        ...
-
-        if fig is not None:
-            axs = fig.axes
-            # PLOT THE FIT
-            ...
-
-        return {
-            # KEY: VALUE,
-        }
