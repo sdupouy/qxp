@@ -8,7 +8,7 @@ from qxp.utils.waveforms import gaussian_shape
 
 
 BASE_SAVE_PATH = Path(r'D:\data\tunable_autocat_qxp')
-CHIP_NAME = 'RC-0008-01-B-top'
+CHIP_NAME = 'RC-0008-01-C-bottom'
 COOLDOWN_NUMBER = 5
 RACK_NAME = 'Australie'
 
@@ -75,7 +75,7 @@ INSTRUMENTS_CONFIG = {
         "class": "APUASYN20",
         "address": "TCPIP0::192.168.0.58::inst0::INSTR",
         "channel": 1,
-        "output": False,
+        "output": True,
         "frequency": 7.0 * u.GHz,
         "power": 18  # dBm
     },
