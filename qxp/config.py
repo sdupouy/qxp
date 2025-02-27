@@ -15,6 +15,7 @@ DATA_DIRNAME = 'data'
 DEBUG_SCRIPTS_DIRNAME = 'debug_scripts'
 FIGURES_DIRNAME = 'figures'
 TIMESTAMP_FORMAT = "%d-%m-%Y_%Hh%Mm%S"
+MPLSTYLE_PATH = BASE_DIR / 'experiments/autocat/config/basic.mplstyle'
 
 # OPX connection
 CLUSTER_NAME = 'Cluster_1'

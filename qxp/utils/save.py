@@ -3,7 +3,8 @@ from datetime import datetime
 import h5py
 import json
 
-from qxp.config import COOLDOWN_SAVE_PATH, TIMESTAMP_FORMAT, CHIP_NAME, DATA_DIRNAME
+from qxp.config import (COOLDOWN_SAVE_PATH, TIMESTAMP_FORMAT, CHIP_NAME, DATA_DIRNAME, FIGURES_DIRNAME,
+                        DEBUG_SCRIPTS_DIRNAME)
 from qxp.measurement_db.core.models import Measurement
 
 
@@ -30,8 +31,8 @@ def get_experiment_params(experiment):
     return experiment_params
 
 
-def make_experiment_save_path(experiment_name, timestamp):
-    """ Return the saving path for an experiment, creating the directories if needed.
+def make_data_save_path(experiment_name, timestamp):
+    """ Return the saving path for an experiment's data, creating the directories if needed.
     Args:
         experiment_name: Experiment name.
         timestamp: Experiment self.start_timestamp.
@@ -40,6 +41,30 @@ def make_experiment_save_path(experiment_name, timestamp):
     save_path.mkdir(parents=True, exist_ok=True)
     save_path = save_path.joinpath(timestamp).with_suffix('.h5')
     return str(save_path)  # needs to be a string for HDF5 saving
+
+
+def make_figure_save_path(experiment_name, timestamp):
+    """ Return the saving path for an experiment's figure, creating the directories if needed.
+    Args:
+        experiment_name: Experiment name.
+        timestamp: Experiment self.start_timestamp.
+    """
+    save_path = COOLDOWN_SAVE_PATH / FIGURES_DIRNAME / experiment_name
+    save_path.mkdir(parents=True, exist_ok=True)
+    save_path = save_path.joinpath(timestamp).with_suffix('.png')
+    return save_path
+
+
+def make_debug_script_save_path(experiment_name, timestamp):
+    """ Return the saving path for an experiment's debug script, creating the directories if needed.
+    Args:
+        experiment_name: Experiment name.
+        timestamp: Experiment self.start_timestamp.
+    """
+    save_path = COOLDOWN_SAVE_PATH / DEBUG_SCRIPTS_DIRNAME / experiment_name
+    save_path.mkdir(parents=True, exist_ok=True)
+    save_path = save_path.joinpath(timestamp).with_suffix('.py')
+    return save_path  # must be a pathlib.Path object
 
 
 def save_dict_to_hdf5(dict_to_save, save_path):

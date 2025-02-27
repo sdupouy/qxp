@@ -14,7 +14,7 @@ class TimeOfFlight(BaseQuaExperiment):
     experiment_name = 'time_of_flight'
     description = """Measure the time of flight of a readout pulse."""
 
-    def __init__(self, n_avg, **kwargs):
+    def __init__(self, n_avg=10000, **kwargs):
         """
         Args:
             n_avg: The averaging.
@@ -25,6 +25,7 @@ class TimeOfFlight(BaseQuaExperiment):
     def auto_set_exp_config(self):
         """ Automatically set the parameters of the experiment. """
         autoconfig.auto_set_exp_config(self.exp_config)
+        self.exp_config['ro_resonator']['time_of_flight'] = 24  # minimum allowed
 
     def auto_set_instruments_config(self):
         """ Automatically set the instruments' initialization parameters. """
@@ -74,24 +75,24 @@ class TimeOfFlight(BaseQuaExperiment):
         delay = np.argmax(filtered_signal > th)
         delay = np.round(delay / 4) * 4  # Find the closest multiple integer of 4ns
         self.fit_params['delay'] = delay
-
-        print(f"Time of flight = {delay} ns")
+        time_of_flight = delay - self.exp_config['ro_resonator']['time_of_flight']
+        print(f"Time of flight = {time_of_flight} ns")
 
         return {
-            'time_of_flight': delay,
+            'time_of_flight': time_of_flight,
         }
 
     def plot(self):
         fig, axs = plt.subplots(2, 1)
-        axs[0].set_xlabel('Time (ns)')
         axs[0].set_ylabel('Amplitude (V)')
         axs[0].set_title('Single trace')
+        axs[1].set_xlabel('Time (ns)')
         axs[1].set_ylabel('Amplitude (V)')
-        axs[0].set_title('Averaged trace')
+        axs[1].set_title('Averaged trace')
 
         axs[0].plot(self.data["adc1_single_run"])
         axs[1].plot(self.data["adc1"])
 
         if self.fit_params:
-            axs[1].axvline(self.fit_params['delay'])
+            axs[1].axvline(self.fit_params['delay'], linestyle='--', color='black')
         return fig

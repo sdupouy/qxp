@@ -9,11 +9,10 @@ from qxp.utils.waveforms import gaussian_shape
 
 BASE_SAVE_PATH = Path(r'D:\data\tunable_autocat_qxp')
 CHIP_NAME = 'RC-0008-01-C-bottom'
-COOLDOWN_NUMBER = 5
+COOLDOWN_NUMBER = 1
 RACK_NAME = 'Australie'
 
 # The experiment configuration is used to build the QUA configuration dictionary.
-# These parameters provide default values that can be overridden by database values.
 EXP_CONFIG = {
     "ro_resonator": {
         "lo": "ro_resonator_lo",
@@ -21,8 +20,8 @@ EXP_CONFIG = {
         "sideband": -1,
 
         "resonance_freq": 6.93874 * u.GHz,
-        "pulse_length": int(3000 * u.ns),
-        "pulse_amp": 0.05,
+        "pulse_length": int(10000 * u.ns),
+        "pulse_amp": 0.3,
 
         "time_of_flight": 360 * u.ns,
         "readout_phase": 0 * 2*np.pi,
@@ -30,30 +29,27 @@ EXP_CONFIG = {
     },
 
     "transmon": {
+        "lo": "transmon_lo",
+        "i_freq": 90 * u.MHz,
+        "sideband": -1,
+
         "resonance_freq": 2.6922 * u.GHz,
         "pi_pulse_length": int(1000 * u.ns),
         "pi_pulse_amp": 0.005,
         "saturation_pulse_length": int(1000 * u.ns),
         "saturation_pulse_amp": 0.005,
 
-        "lo": "transmon_lo",
-        "i_freq": 90 * u.MHz,
-        "sideband": -1,
-
         "reset_time": 100_000 * u.ns,
     },
 
     "memory": {
+        "lo": "memory_lo",
+        "i_freq": 100 * u.MHz,
+        "sideband": -1,
+
         "pulse_length": int(100 * u.ns),
         "const_pulse_amp": 0.02,
         "gaussian_pulse_amp": 0.2,
-
-        "lo_channel": 3,
-        "lo_output": True,
-        "lo_power": 15,  # dBm
-        "lo_frequency": 3.55 * u.GHz,
-        "im_frequency": 100 * u.MHz,
-        "sideband": -1,
 
         "i_offset": -0.01721,
         "q_offset": -0.00985,
@@ -69,6 +65,7 @@ EXP_CONFIG = {
         "pump": "twpa_pump"
     }
 }
+# These parameters provide default values that can be overridden by database values.
 
 INSTRUMENTS_CONFIG = {
     "ro_resonator_lo": {
@@ -114,7 +111,8 @@ INSTRUMENTS_CONFIG = {
     }
 }
 
-def get_qua_config(params):
+def get_qua_config(exp_config, instruments_config):
+    memory_lo = instruments_config[exp_config["memory"]["lo"]]
     config = {
         'version': 1,
 
@@ -124,8 +122,8 @@ def get_qua_config(params):
                 'analog_outputs': {
                     1: {'offset': 0},  # readout resonator
                     2: {'offset': 0},  # transmon
-                    3: {'offset': params['memory']['i_offset']},  # memory I
-                    4: {'offset': params['memory']['q_offset']},  # memory Q
+                    3: {'offset': exp_config['memory']['i_offset']},  # memory I
+                    4: {'offset': exp_config['memory']['q_offset']},  # memory Q
                     10: {'offset': 0.0}  # SQUID DC
                 },
                 'digital_outputs': {
@@ -143,14 +141,14 @@ def get_qua_config(params):
                 'singleInput': {
                     'port': ('con1', 1),
                 },
-                'intermediate_frequency': params['ro_resonator']['im_frequency'],
+                'intermediate_frequency': exp_config['ro_resonator']['i_freq'],
                 'operations': {
                     'readout': 'readout',
                 },
                 'outputs': {
                     'out1': ('con1', 1)
                 },
-                'time_of_flight': params['ro_resonator']['time_of_flight'],
+                'time_of_flight': exp_config['ro_resonator']['time_of_flight'],
                 'smearing': 0,
             },
 
@@ -158,7 +156,7 @@ def get_qua_config(params):
                 'singleInput': {
                     'port': ('con1', 2),
                 },
-                'intermediate_frequency': params['transmon']['im_frequency'],
+                'intermediate_frequency': exp_config['transmon']['i_freq'],
                 'operations': {
                     'transmon_pi': 'transmon_pi',
                     'transmon_saturation': 'transmon_saturation',
@@ -167,12 +165,12 @@ def get_qua_config(params):
 
             'memory': {
                 'mixInputs': {
-                    "I": ('con1', 3),
-                    "Q": ('con1', 4),
-                    "lo_frequency": params['memory']['lo_frequency'],
-                    "mixer": "memory_mixer",
+                    'I': ('con1', 3),
+                    'Q': ('con1', 4),
+                    'lo_frequency': memory_lo['frequency'],
+                    'mixer': 'memory_mixer',
                 },
-                'intermediate_frequency': params['memory']['im_frequency'],
+                'intermediate_frequency': exp_config['memory']['i_freq'],
                 'operations': {
                     'memory_const': 'memory_const',
                     'displacement': 'displacement',
@@ -181,17 +179,19 @@ def get_qua_config(params):
 
             'squid_flux': {
                 'singleInput': {'port': ('con1', 10)},
-                'intermediate_frequency': int(0e6),
-                'operations': {"const": "const_flux_pulse"}
+                'intermediate_frequency': 0,
+                'operations': {
+                    'const': 'const_flux_pulse'
+                }
             }
         },
 
         'mixers': {
             'memory_mixer': [
                 {
-                    "intermediate_frequency": params['memory']['im_frequency'],
-                    "lo_frequency": params['memory']['lo_frequency'],
-                    "correction": iq_imbalance_k_theta(params['memory']['k'], params['memory']['theta']),
+                    'intermediate_frequency': exp_config['memory']['i_freq'],
+                    'lo_frequency': memory_lo['frequency'],
+                    'correction': iq_imbalance_k_theta(exp_config['memory']['k'], exp_config['memory']['theta']),
                 }
             ],
         },
@@ -199,21 +199,21 @@ def get_qua_config(params):
         'pulses': {
             'readout': {
                 'operation': 'measurement',
-                'length': params['ro_resonator']['pulse_length'],
+                'length': exp_config['ro_resonator']['pulse_length'],
                 'waveforms': {
                     'single': 'readout_wave'
                 },
                 'integration_weights': {
-                    "cos": "cosine_weights",
-                    "sin": "sine_weights",
-                    "minus_sin": "minus_sine_weights",
+                    'cos': 'cosine_weights',
+                    'sin': 'sine_weights',
+                    'minus_sin': 'minus_sine_weights',
                 },
-                "digital_marker": "ON",
+                'digital_marker': 'ON',
             },
 
             'transmon_pi': {
                 'operation': 'control',
-                'length': params['transmon']['pulse_length'],
+                'length': exp_config['transmon']['pi_pulse_length'],
                 'waveforms': {
                     'single': 'transmon_pi_wave',
                 }
@@ -221,35 +221,35 @@ def get_qua_config(params):
 
             'transmon_saturation': {
                 'operation': 'control',
-                'length': params['transmon']['pulse_length'],
+                'length': exp_config['transmon']['saturation_pulse_length'],
                 'waveforms': {
                     'single': 'transmon_saturation_wave',
                 }
             },
 
-            "memory_const": {
-                "operation": "control",
-                "length": params['memory']['pulse_length'],
-                "waveforms": {
-                    "I": "memory_const_wave",
-                    "Q": "zero_wave",
+            'memory_const': {
+                'operation': 'control',
+                'length': exp_config['memory']['pulse_length'],
+                'waveforms': {
+                    'I': 'memory_const_wave',
+                    'Q': 'zero_wave',
                 },
             },
 
-            "displacement": {
-                "operation": "control",
-                "length": params['memory']['pulse_length'],
-                "waveforms": {
-                    "I": "memory_wave",
-                    "Q": "zero_wave",
+            'displacement': {
+                'operation': 'control',
+                'length': exp_config['memory']['pulse_length'],
+                'waveforms': {
+                    'I': 'memory_wave',
+                    'Q': 'zero_wave',
                 },
             },
 
-            "const_flux_pulse": {
-                "operation": "control",
-                "length": 1000,
-                "waveforms": {
-                    "single": "const_flux_wave",
+            'const_flux_pulse': {
+                'operation': 'control',
+                'length': 1000,
+                'waveforms': {
+                    'single': 'const_flux_wave',
                 }
             }
         },
@@ -257,7 +257,7 @@ def get_qua_config(params):
         'waveforms': {
             'readout_wave': {
                 'type': 'constant',
-                'sample': params['ro_resonator']['pulse_amp'],
+                'sample': exp_config['ro_resonator']['pulse_amp'],
             },
 
             'zero_wave': {
@@ -267,33 +267,34 @@ def get_qua_config(params):
 
             'transmon_pi_wave': {
                 'type': 'arbitrary',
-                'samples': gaussian_shape(params['transmon']['pulse_amp'],
-                                          params['transmon']['pulse_length'],
-                                          params['transmon']['pulse_length'] / 6,
+                'samples': gaussian_shape(exp_config['transmon']['pi_pulse_amp'],
+                                          exp_config['transmon']['pi_pulse_length'],
+                                          exp_config['transmon']['pi_pulse_length'] / 6,
                                           padding=True)
             },
 
             'memory_wave': {
                 'type': 'arbitrary',
-                'samples': gaussian_shape(params['memory']['gaussian_pulse_amp'],
-                                          params['memory']['pulse_length'],
-                                          params['memory']['pulse_length'] / 6,
+                'samples': gaussian_shape(exp_config['memory']['gaussian_pulse_amp'],
+                                          exp_config['memory']['pulse_length'],
+                                          exp_config['memory']['pulse_length'] / 6,
                                           padding=True)
             },
 
             'memory_const_wave': {
                 'type': 'constant',
-                'sample': params['memory']['const_pulse_amp'],
+                'sample': exp_config['memory']['const_pulse_amp'],
             },
 
             'transmon_saturation_wave': {
                 'type': 'constant',
-                'sample': params['transmon']['pulse_amp'],
+                'sample': exp_config['transmon']['saturation_pulse_amp'],
             },
 
-
-            "const_flux_wave": {"type": "constant",
-                                "sample": 0.0},
+            'const_flux_wave': {
+                'type': 'constant',
+                'sample': 0.0
+            },
         },
 
         'digital_waveforms': {
@@ -303,17 +304,17 @@ def get_qua_config(params):
         },
 
         'integration_weights': {
-            "cosine_weights": {
-                "cosine": [(1.0, params['ro_resonator']['pulse_length'])],
-                "sine": [(0.0, params['ro_resonator']['pulse_length'])],
+            'cosine_weights': {
+                'cosine': [(1.0, exp_config['ro_resonator']['pulse_length'])],
+                'sine': [(0.0, exp_config['ro_resonator']['pulse_length'])],
             },
-            "sine_weights": {
-                "cosine": [(0.0, params['ro_resonator']['pulse_length'])],
-                "sine": [(1.0, params['ro_resonator']['pulse_length'])],
+            'sine_weights': {
+                'cosine': [(0.0, exp_config['ro_resonator']['pulse_length'])],
+                'sine': [(1.0, exp_config['ro_resonator']['pulse_length'])],
             },
-            "minus_sine_weights": {
-                "cosine": [(0.0, params['ro_resonator']['pulse_length'])],
-                "sine": [(-1.0, params['ro_resonator']['pulse_length'])],
+            'minus_sine_weights': {
+                'cosine': [(0.0, exp_config['ro_resonator']['pulse_length'])],
+                'sine': [(-1.0, exp_config['ro_resonator']['pulse_length'])],
             },
         }
     }

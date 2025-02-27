@@ -4,13 +4,16 @@ import threading
 import matplotlib.pyplot as plt
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
 
-from qxp.config import EXP_CONFIG, get_qua_config, QOP_IP, QOP_PORT, CLUSTER_NAME, COOLDOWN_SAVE_PATH, \
-    DEBUG_SCRIPTS_DIRNAME, FIGURES_DIRNAME, INSTRUMENTS_CONFIG, CHIP_NAME, COOLDOWN_NUMBER, RACK_NAME
+from qxp.config import (EXP_CONFIG, get_qua_config, QOP_IP, QOP_PORT, CLUSTER_NAME, INSTRUMENTS_CONFIG, CHIP_NAME,
+                        COOLDOWN_NUMBER, RACK_NAME, MPLSTYLE_PATH)
 from qxp.utils.config import update_nested_dict
 from qxp.utils.instruments import initialize_instruments_from_config, turn_off_instruments_from_config
 from qxp.utils.save import get_current_timestamp, get_experiment_params, get_latest_run_path, \
-    make_experiment_save_path, save_dict_to_hdf5, load_dict_from_hdf5, datetime_from_timestamp
+    save_dict_to_hdf5, load_dict_from_hdf5, datetime_from_timestamp, make_figure_save_path, \
+    make_debug_script_save_path, make_data_save_path
 from qxp.measurement_db.core.models import Cooldown, OpticalTable, ExperimentRun, Parameter, Measurement
+
+plt.style.use(MPLSTYLE_PATH)
 
 
 class BaseQuaExperiment(ABC):
@@ -103,12 +106,7 @@ class BaseQuaExperiment(ABC):
 
         # Save the QUA debug script
         debug_script = generate_qua_script(prog=prog, config=self.qua_config)
-        debug_script_path = (
-                COOLDOWN_SAVE_PATH
-                / DEBUG_SCRIPTS_DIRNAME
-                / f'{self.experiment_name}_{self.start_timestamp}.py'
-        )
-        debug_script_path.parent.mkdir(parents=True, exist_ok=True)
+        debug_script_path = make_debug_script_save_path(self.experiment_name, self.start_timestamp)
         debug_script_path.write_text(debug_script)
 
         # Simulate or execute
@@ -129,7 +127,7 @@ class BaseQuaExperiment(ABC):
 
     def save(self):
         """ Save the experiment parameters and data in the HDF5 format. """
-        self.save_path = make_experiment_save_path(self.experiment_name, self.start_timestamp)
+        self.save_path = make_data_save_path(self.experiment_name, self.start_timestamp)
         dict_to_save = get_experiment_params(self)
 
         # Save the code of the experiment module
@@ -224,12 +222,7 @@ class BaseQuaExperiment(ABC):
 
         if do_plot:
             fig = self.plot()
-            fig_path = (
-                    COOLDOWN_SAVE_PATH
-                    / FIGURES_DIRNAME
-                    / f'{self.experiment_name}_{self.start_timestamp}.png'
-            )
-            fig_path.parent.mkdir(parents=True, exist_ok=True)
+            fig_path = make_figure_save_path(self.experiment_name, self.start_timestamp)
             fig.savefig(fig_path)
             print("[+] Saved figure at", fig_path)
 
@@ -254,7 +247,7 @@ class BaseQuaExperiment(ABC):
         self.auto_set_instruments_config()
         if force_instruments_config is not None:
             update_nested_dict(self.instruments_config, force_instruments_config)
-        self.qua_config = get_qua_config(self.exp_config)
+        self.qua_config = get_qua_config(self.exp_config, self.instruments_config)
 
     def configure_and_run(self, force_exp_config=None, force_instruments_config=None,
                           simulate=False, do_fit=True, do_plot=True, do_save=True, do_update_db=False):

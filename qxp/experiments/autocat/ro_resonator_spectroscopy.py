@@ -15,7 +15,7 @@ from qxp.utils.plot import clean_axes, adjust_axes_limits
 from qxp.experiments.autocat.config import autoconfig
 
 
-class OneToneSpectroscopy(BaseQuaExperiment):
+class RoResonatorSpectroscopy(BaseQuaExperiment):
     experiment_name = 'ro_resonator_spectroscopy'
     description = """A one-tone spectroscopy of the readout resonator."""
 
@@ -127,7 +127,7 @@ class OneToneSpectroscopy(BaseQuaExperiment):
             axs[1].plot(r_freqs / u.MHz, unwrapped_phase, ".")
 
             adjust_axes_limits(axs)
-            plt.pause(0.1)
+            plt.pause(1)
             progress_counter(data['iteration'], self.n_avg)  # progress bar
 
     def fit(self):
