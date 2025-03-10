@@ -1,0 +1,157 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+  <div class="row mb-3">
+    <div class="col-md-6 mb-3">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h4 class="mb-0">Current cooldown</h4>
+          {% if cooldown.is_cold %}
+          	<span class="badge text-bg-primary">status: cold <i class="bi bi-snow"></i></span>
+          {% else %}
+          	<span class="badge text-bg-danger">status: warm</span>
+          {% endif %}
+        </div>
+        {% if cooldown %}
+          <div class="row g-0">
+            <div class="col-md-4 index-card-img-container image-hover" data-bs-toggle="modal" data-bs-target="#cooldownCablingModal">
+              <img src="{{ cooldown.cabling.url }}" class="img-fluid" alt="cooldown wiring">
+            </div>
+            <div class="col-md-8">
+              <div class="card-body">
+                <h5># {{ cooldown.number }}</h5>
+                <p class="card-text">{{ cooldown.comment }}</p>
+                <p class="card-text"><small class="text-body-secondary">Cooled down on {{ cooldown.datetime }}</small></p>
+              </div>
+            </div>
+          </div>
+        {% else %}
+          <div class="p-3">
+            <p>No cooldown yet.</p>
+            <a href="{% url 'admin:core_cooldown_add' %}" class="btn btn-outline-primary" role="button">Add a cooldown</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    {% if cooldown %}
+      <div class="col-md-6 mb-3">
+        <div class="card">
+          <div class="card-header">
+            <h4 class="mb-0">Current chip</h4>
+          </div>
+          <div class="row g-0">
+            <div class="col-md-4 index-card-img-container image-hover" data-bs-toggle="modal" data-bs-target="#chipPictureModal">
+              <img src="{{ cooldown.chip.picture.url }}" class="img-fluid" alt="chip picture">
+            </div>
+            <div class="col-md-8">
+              <div class="card-body">
+                <h5 class="card-title">{{ cooldown.chip.name }}</h5>
+                <p class="card-text">{{ cooldown.chip.comment }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+  
+  <div class="modal fade" id="cooldownCablingModal" tabindex="-1" aria-labelledby="cooldownCablingModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="cooldownCablingModalLabel">Current cabling</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <img src="{{ cooldown.cabling.url }}" class="img-fluid" alt="cooldown wiring">
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="modal fade" id="chipPictureModal" tabindex="-1" aria-labelledby="chipPictureModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="chipPictureModalLabel">Chip {{ cooldown.chip.name }}</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <img src="{{ cooldown.chip.picture.url }}" class="img-fluid" alt="chip picture">
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="row">
+    <div class="col-md-6">
+      <h4>Latest experiment runs</h4>
+    
+      {% if exp_runs %}
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th scope="col"></th>
+              <th scope="col">Date</th>
+              <th scope="col">Name</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for exp_run in exp_runs %}
+            <tr>
+              <td>
+                {% if exp_run.starred %}
+                  <i class="bi bi-star-fill"></i>
+                {% else %}
+                  <i class="bi bi-star"></i>
+                {% endif %}
+              </td>
+              <td>{{ exp_run.datetime }}</td>
+              <td>{{ exp_run.experiment.display_name }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <a href="{% url 'experiment-run-list' %}" class="btn btn-outline-primary" role="button"><i class="bi bi-list me-1"></i>Show all</a>
+      {% else %}
+        <p>No experiment logged in the database yet.</p>
+      {% endif %}
+    </div>
+    
+    <div class="col-md-6">
+      <h4>Latest measurements</h4>
+      
+      {% if measurements %}
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Name</th>
+              <th scope="col">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for measurement in measurements %}
+            <tr>
+              <td>{{ measurement.experiment_run.datetime }}</td>
+              <td><a href="{% url 'parameter-detail' measurement.parameter.id %}">{{ measurement.parameter.display_name_or_identifier }}</a></td>
+              <td>
+                {{ measurement.value }}
+                {% if measurement.uncertainty %}
+              	  &plusmn; {{ measurement.uncertainty }}
+                {% endif %}
+                {{ measurement.parameter.unit }}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <a href="{% url 'measurement-list' %}" class="btn btn-outline-primary" role="button"><i class="bi bi-list me-1"></i>Show all</a>
+      {% else %}
+        <p>No measurement logged in the database yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+{% endblock %}

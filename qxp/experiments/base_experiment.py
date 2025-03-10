@@ -11,7 +11,8 @@ from qxp.utils.instruments import initialize_instruments_from_config, turn_off_i
 from qxp.utils.save import get_current_timestamp, get_experiment_params, get_latest_run_path, \
     save_dict_to_hdf5, load_dict_from_hdf5, datetime_from_timestamp, make_figure_save_path, \
     make_debug_script_save_path, make_data_save_path
-from qxp.measurement_db.core.models import Cooldown, OpticalTable, ExperimentRun, Parameter, Measurement
+from qxp.measurement_db.core.models import Cooldown, OpticalTable, ExperimentRun, Parameter, Measurement, Experiment, \
+    Chip
 
 plt.style.use(MPLSTYLE_PATH)
 
@@ -31,8 +32,8 @@ class BaseQuaExperiment(ABC):
     The following methods can be optionally implemented in the inherited classes:
     - live_plotting(): Manage the live-plotting loop that will be run in a separate thread during the
         execution of the program.
-    - manage_job_pauses(): Check when the job is paused, and decide what to do. Typical usage is to define outer
-        instrument loops.
+    - manage_job_pauses(job, result_handles): Check when the job is paused, and decide what to do. Typical usage is to
+        define outer instrument loops.
 
     Example usage (replace the base experiment by one of its inherited class):
     ```
@@ -40,8 +41,8 @@ class BaseQuaExperiment(ABC):
     experiment.configure_and_run()
     ```
     """
-    experiment_name = 'abstract_base_qua_experiment'  # the name of the experiment
-    description = ''  # short description of the experiment
+    identifier = 'abstract_base_qua_experiment'  # the name of the experiment, to be used as a unique identifier (e.g. to build file names)
+    display_name = 'Abstract base QUA experiment'  # the name of the experiment, to be printed
 
     def __init__(self, comment=""):
         """ Initialize the experiment.
@@ -106,7 +107,7 @@ class BaseQuaExperiment(ABC):
 
         # Save the QUA debug script
         debug_script = generate_qua_script(prog=prog, config=self.qua_config)
-        debug_script_path = make_debug_script_save_path(self.experiment_name, self.start_timestamp)
+        debug_script_path = make_debug_script_save_path(self.identifier, self.start_timestamp)
         debug_script_path.write_text(debug_script)
 
         # Simulate or execute
@@ -127,15 +128,14 @@ class BaseQuaExperiment(ABC):
 
     def save(self):
         """ Save the experiment parameters and data in the HDF5 format. """
-        self.save_path = make_data_save_path(self.experiment_name, self.start_timestamp)
+        self.save_path = make_data_save_path(self.identifier, self.start_timestamp)
         dict_to_save = get_experiment_params(self)
 
         # Save the code of the experiment module
         module_name = self.__class__.__module__
         module = sys.modules.get(module_name)
-        if module and hasattr(module, '__file__'):
-            with open(module.__file__, 'r') as f:
-                experiment_code = f.read()
+        with open(module.__file__, 'r') as f:
+            experiment_code = f.read()
         dict_to_save['experiment_code'] = experiment_code
 
         save_dict_to_hdf5(dict_to_save, self.save_path)
@@ -144,17 +144,25 @@ class BaseQuaExperiment(ABC):
     def load(self, path=None):
         """ Load saved data. If path is None the latest run will be loaded. """
         if path is None:
-            path = get_latest_run_path(self.experiment_name)
+            path = get_latest_run_path(self.identifier)
         data_dict = load_dict_from_hdf5(path)
         for key, value in data_dict.items():
             setattr(self, key, value)
 
     def log_experiment_run_to_db(self):
         """ Log the experiment run in the measurement database. """
+        experiment = Experiment.objects.get_or_create(
+            name=self.identifier,
+            defaults={
+                'display_name': self.display_name,
+                'description': (self.__doc__ or '').replace('\t', ''),
+                'module_name': self.__class__.__module__,
+            }
+        )[0]
         cooldown = Cooldown.objects.get(chip__name=CHIP_NAME, number=COOLDOWN_NUMBER)
         optical_table = OpticalTable.objects.filter(rack_name=RACK_NAME).latest('datetime')
         experiment_run = ExperimentRun(
-            name=self.experiment_name,
+            experiment=experiment,
             datetime=datetime_from_timestamp(self.start_timestamp),
             cooldown=cooldown,
             optical_table=optical_table,
@@ -168,12 +176,19 @@ class BaseQuaExperiment(ABC):
     def save_measured_params_to_db(self):
         """ Save the measured parameters to the database. """
         if self.measured_db_params:
+            chip = Chip.objects.get(name=CHIP_NAME)
+            experiment_run = ExperimentRun.objects.get(id=self.experiment_run_id)
+
             for key, value in self.measured_db_params.items():
-                parameter = Parameter.objects.get_or_create(name=key)[0]
-                experiment_run = ExperimentRun.objects.get(id=self.experiment_run_id)
+                if isinstance(value, (tuple, list)) and len(value) == 2:
+                    value, uncertainty = value  # unpack (value, uncertainty) tuples
+                else:
+                    uncertainty = None
+                parameter = Parameter.objects.get_or_create(identifier=key, chip=chip)[0]
                 measurement = Measurement(
                     parameter=parameter,
                     value=value,
+                    uncertainty=uncertainty,
                     experiment_run=experiment_run,
                 )
                 measurement.save()
@@ -190,7 +205,7 @@ class BaseQuaExperiment(ABC):
             do_save (bool): Whether to save the data.
             do_update_db (bool): Whether to update the database.
         """
-        print('[+] Running', self.experiment_name)
+        print('[+] Running', self.identifier)
         self.start_timestamp = get_current_timestamp()
         self.initialize_instruments()
         prog = self.get_qua_program()
@@ -201,14 +216,14 @@ class BaseQuaExperiment(ABC):
         live_plotting_thread = None
         live_plotting = getattr(self, 'live_plotting', None)
         if callable(live_plotting):
-            live_plotting_thread = threading.Thread(target=live_plotting, args=(job, result_handles), daemon=True)
+            live_plotting_thread = threading.Thread(target=live_plotting, args=(job,), daemon=True)
             print('[+] Starting live plotting thread')
             live_plotting_thread.start()
 
         # manage job pauses (run outer loops) if the method is defined
         manage_job_pauses = getattr(self, 'manage_job_pauses', None)
         if callable(manage_job_pauses):
-            manage_job_pauses(job, result_handles)
+            manage_job_pauses(job)
 
         if live_plotting_thread:
             live_plotting_thread.join()  # wait for the thread to terminate (normally when the job finished processing)
@@ -222,7 +237,7 @@ class BaseQuaExperiment(ABC):
 
         if do_plot:
             fig = self.plot()
-            fig_path = make_figure_save_path(self.experiment_name, self.start_timestamp)
+            fig_path = make_figure_save_path(self.identifier, self.start_timestamp)
             fig.savefig(fig_path)
             print("[+] Saved figure at", fig_path)
 
@@ -265,4 +280,4 @@ class BaseQuaExperiment(ABC):
         self.run(simulate=simulate, do_fit=do_fit, do_plot=do_plot, do_save=do_save, do_update_db=do_update_db)
 
     def __str__(self):
-        return f'{self.experiment_name}__{self.start_timestamp}'
+        return f'{self.identifier}__{self.start_timestamp}'

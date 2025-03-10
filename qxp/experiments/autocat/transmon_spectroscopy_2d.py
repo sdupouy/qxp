@@ -1,3 +1,5 @@
+#TODO: delete (renamed "transmon chevron")
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal, optimize
@@ -16,7 +18,7 @@ from qxp.utils.fit import fit_cosine, cosine_tmax_from_popt
 
 
 class OneToneSpectroscopy(BaseQuaExperiment):
-    experiment_name = 'transmon_spectroscopy_2d'
+    identifier = 'transmon_spectroscopy_2d'
     description = """
         A two-tone spectroscopy of the readout transmon,
         where both transmon IF and pulse amplitudes are swept.
@@ -127,7 +129,7 @@ class OneToneSpectroscopy(BaseQuaExperiment):
         axs[1].set_xlabel("Transmon pulse frequency (MHz)")
         axs[0].set_title(r"$R=\sqrt{I^2 + Q^2}$ (V)")
         axs[1].set_title("Phase (rad)")
-        fig.canvas.manager.set_window_title(f'{self.experiment_name}: {self.start_timestamp}')
+        fig.canvas.manager.set_window_title(f'{self.identifier}: {self.start_timestamp}')
 
         while results.is_processing():
             # Process the data

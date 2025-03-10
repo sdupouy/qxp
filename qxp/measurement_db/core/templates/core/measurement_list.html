@@ -1,0 +1,28 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+  <h1>Measurements</h1>
+  
+  {% if object_list %}
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">Date</th>
+          <th scope="col">Name</th>
+          <th scope="col">Value</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for measurement in object_list %}
+        <tr>
+          <th scope="row">{{ measurement.datetime }}</th>
+          <td>{{ measurement.parameter.name }}</td>
+          <td>{{ measurement.value }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No measurement logged in the database yet.</p>
+  {% endif %}
+{% endblock %}

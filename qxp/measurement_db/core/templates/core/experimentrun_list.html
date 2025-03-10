@@ -1,0 +1,38 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+  <h1>Experiment runs</h1>
+  
+  {% if object_list %}
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col"></th>
+          <th scope="col">Date</th>
+          <th scope="col">Identifier</th>
+          <th scope="col">Name</th>
+          <th scope="col">Chip</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for exp_run in object_list %}
+        <tr>
+          <th scope="row">
+            {% if exp_run.starred %}
+              <i class="bi bi-star-fill"></i>
+            {% else %}
+              <i class="bi bi-star"></i>
+            {% endif %}
+          </th>
+          <td>{{ exp_run.datetime }}</td>
+          <td>{{ exp_run.experiment.identifier }}</td>
+          <td>{{ exp_run.experiment.display_name }}</td>
+          <td>{{ exp_run.cooldown.chip }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No experiment logged in the database yet.</p>
+  {% endif %}
+{% endblock %}

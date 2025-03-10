@@ -15,16 +15,14 @@ This software aims at providing:
 - open a web browser and go to http://127.0.0.1:8000 
 
 ## TODO list
-- create templates for the measurement database
-- save the code of the experiment class with the data
+- fill up templates for the measurement database
+- improve the admin panel
 - implement other experiments
-    - time of flight
-    - readout frequency optimization
-    - readout amplitude optimization
     - readout duration optimization
     - readout weights optimization
     - ro resonator spectroscopy lo sweep
     - transmon spectroscopy lo sweep
+    - Rabi chevron
     - T1
     - Ramsey
     - T2 echo

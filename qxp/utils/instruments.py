@@ -102,3 +102,17 @@ def turn_off_instruments_from_config(instruments_config):
             case other:
                 raise NotImplementedError(f"[!] {other} initialization is not implemented")
     print('[+] Done turning off instruments')
+
+
+def get_instrument_by_name(name, instruments_config):
+    config = instruments_config[name]
+    match config['class']:
+        case 'APUASYN20':
+            instrument = APUASYN20(visa_address=config['address'])
+        case 'ASPIN20G':
+            instrument = ASPIN20G(visa_address=config['address'])
+        case 'BN103':
+            instrument = BN103(ip=config['address'])
+        case other:
+            raise NotImplementedError(f"[!] {other} instrument driver is not implemented")
+    return instrument

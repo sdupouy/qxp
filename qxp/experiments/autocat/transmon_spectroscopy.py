@@ -14,9 +14,17 @@ from qxp.utils.plot import clean_axes, adjust_axes_limits
 from qxp.experiments.autocat.config import autoconfig
 
 
-class OneToneSpectroscopy(BaseQuaExperiment):
-    experiment_name = 'transmon_spectroscopy'
-    description = """A two-tone spectroscopy of the readout transmon."""
+class TransmonSpectroscopy(BaseQuaExperiment):
+    """
+    TRANSMON TWO-TONE SPECTROSCOPY
+    This sequence involves measuring the resonance frequency of the transmon by two-tone spectroscopy: a tone is sent to
+    the transmon with a sweeping frequency, and a readout is done at each step.
+
+    Prerequisites:
+        - Having measured the readout resonator frequency.
+    """
+    identifier = 'transmon_spectroscopy'
+    display_name = 'Transmon spectroscopy (2-tone)'
 
     def __init__(self, i_freqs=None, pulse_type='saturation', n_avg=2000, **kwargs):
         """
@@ -87,11 +95,10 @@ class OneToneSpectroscopy(BaseQuaExperiment):
 
         return prog
 
-    def get_results(self, job):
-        return fetching_tool(job, data_list=["I", "Q", "iteration"], mode="live")
-
-    def get_data(self, results):
-        i_rawdata, q_rawdata, iteration = results.fetch_all()
+    def get_data(self, result_handles):
+        i_rawdata = result_handles.get("I").fetch_all()
+        q_rawdata = result_handles.get("Q").fetch_all()
+        iteration = result_handles.get("iteration").fetch_all()
         readout_pulse_length = self.exp_config['transmon'][f'{self.pulse_type}_pulse_length']
         iq_data = u.demod2volts(i_rawdata + 1j * q_rawdata, readout_pulse_length, single_demod=True)
         data = {
@@ -100,7 +107,7 @@ class OneToneSpectroscopy(BaseQuaExperiment):
         }
         return data
 
-    def live_plotting(self, job, results):
+    def live_plotting(self, job, result_handles):
         lo = self.exp_config['transmon']['lo']
         lo_freq = self.instruments_config[lo]['frequency']
         sideband = self.exp_config['transmon']['sideband']
@@ -113,11 +120,11 @@ class OneToneSpectroscopy(BaseQuaExperiment):
         axs[0].set_ylabel(r"$R=\sqrt{I^2 + Q^2}$ (V)")
         axs[1].set_ylabel("phase (rad)")
         axs[1].set_xlabel("frequency (MHz)")
-        fig.canvas.manager.set_window_title(f'{self.experiment_name}: {self.start_timestamp}')
+        fig.canvas.manager.set_window_title(f'{self.identifier}: {self.start_timestamp}')
 
-        while results.is_processing():
+        while result_handles.is_processing():
             # Process the data
-            data = self.get_data(results)
+            data = self.get_data(result_handles)
             iq_data = data['iq_data']
             amplitude = np.abs(iq_data)  # Amplitude
             phase = np.angle(iq_data)  # Phase
@@ -130,7 +137,21 @@ class OneToneSpectroscopy(BaseQuaExperiment):
 
             adjust_axes_limits(axs)
             plt.pause(0.1)
-            progress_counter(data['iteration'], self.n_avg, start_time=results.get_start_time())  # progress bar
+            progress_counter(data['iteration'], self.n_avg)  # progress bar
+
+    def fit(self):
+        lo = self.exp_config['transmon']['lo']
+        lo_freq = self.instruments_config[lo]['frequency']
+        sideband = self.exp_config['transmon']['sideband']
+        r_freqs = lo_freq + sideband * self.i_freqs
+
+        raise NotImplementedError  # TODO
+
+        print(f"Transmon resonance frequency = {fit['f'][0] / u.GHz:.3f} GHz")
+
+        return {
+            'transmon_resonance_freq': fit['f'][0],
+        }
 
     def plot(self):
         lo = self.exp_config['transmon']['lo']
@@ -153,22 +174,3 @@ class OneToneSpectroscopy(BaseQuaExperiment):
         axs[0].plot(r_freqs / u.MHz, amplitude, ".", label="Data")
         axs[1].plot(r_freqs / u.MHz, unwrapped_phase, ".")
         return fig
-
-    def fit(self, fig=None):
-        lo = self.exp_config['transmon']['lo']
-        lo_freq = self.instruments_config[lo]['frequency']
-        sideband = self.exp_config['transmon']['sideband']
-        r_freqs = lo_freq + sideband * self.i_freqs
-
-        raise NotImplementedError  # TODO
-
-        print(f"Resonance frequency = {fit['f'][0] / u.GHz:.3f} GHz")
-
-        if fig is not None:
-            axs = fig.axes
-            axs[0].plot(r_freqs, ..., ".", label="Fit")
-            axs[0].legend()
-
-        return {
-            'transmon_resonance_frequency': fit['f'][0],
-        }

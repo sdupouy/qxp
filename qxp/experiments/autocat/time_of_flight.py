@@ -11,8 +11,10 @@ from qxp.experiments.base_experiment import BaseQuaExperiment
 
 
 class TimeOfFlight(BaseQuaExperiment):
-    experiment_name = 'time_of_flight'
-    description = """Measure the time of flight of a readout pulse."""
+    # TODO: write a docstring
+
+    identifier = 'time_of_flight'
+    display_name = 'Time of flight'
 
     def __init__(self, n_avg=10000, **kwargs):
         """
@@ -75,7 +77,7 @@ class TimeOfFlight(BaseQuaExperiment):
         delay = np.argmax(filtered_signal > th)
         delay = np.round(delay / 4) * 4  # Find the closest multiple integer of 4ns
         self.fit_params['delay'] = delay
-        time_of_flight = delay - self.exp_config['ro_resonator']['time_of_flight']
+        time_of_flight = delay + self.exp_config['ro_resonator']['time_of_flight']
         print(f"Time of flight = {time_of_flight} ns")
 
         return {

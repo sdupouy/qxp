@@ -20,8 +20,9 @@ EXP_CONFIG = {
         "sideband": -1,
 
         "resonance_freq": 6.93874 * u.GHz,
-        "pulse_length": int(10000 * u.ns),
-        "pulse_amp": 0.3,
+        "ro_pulse_freq": 6.93874 * u.GHz,
+        "ro_pulse_length": int(10000 * u.ns),
+        "ro_pulse_amp": 0.2,
 
         "time_of_flight": 360 * u.ns,
         "readout_phase": 0 * 2*np.pi,
@@ -199,7 +200,7 @@ def get_qua_config(exp_config, instruments_config):
         'pulses': {
             'readout': {
                 'operation': 'measurement',
-                'length': exp_config['ro_resonator']['pulse_length'],
+                'length': exp_config['ro_resonator']['ro_pulse_length'],
                 'waveforms': {
                     'single': 'readout_wave'
                 },
@@ -257,7 +258,7 @@ def get_qua_config(exp_config, instruments_config):
         'waveforms': {
             'readout_wave': {
                 'type': 'constant',
-                'sample': exp_config['ro_resonator']['pulse_amp'],
+                'sample': exp_config['ro_resonator']['ro_pulse_amp'],
             },
 
             'zero_wave': {
@@ -305,16 +306,16 @@ def get_qua_config(exp_config, instruments_config):
 
         'integration_weights': {
             'cosine_weights': {
-                'cosine': [(1.0, exp_config['ro_resonator']['pulse_length'])],
-                'sine': [(0.0, exp_config['ro_resonator']['pulse_length'])],
+                'cosine': [(1.0, exp_config['ro_resonator']['ro_pulse_length'])],
+                'sine': [(0.0, exp_config['ro_resonator']['ro_pulse_length'])],
             },
             'sine_weights': {
-                'cosine': [(0.0, exp_config['ro_resonator']['pulse_length'])],
-                'sine': [(1.0, exp_config['ro_resonator']['pulse_length'])],
+                'cosine': [(0.0, exp_config['ro_resonator']['ro_pulse_length'])],
+                'sine': [(1.0, exp_config['ro_resonator']['ro_pulse_length'])],
             },
             'minus_sine_weights': {
-                'cosine': [(0.0, exp_config['ro_resonator']['pulse_length'])],
-                'sine': [(-1.0, exp_config['ro_resonator']['pulse_length'])],
+                'cosine': [(0.0, exp_config['ro_resonator']['ro_pulse_length'])],
+                'sine': [(-1.0, exp_config['ro_resonator']['ro_pulse_length'])],
             },
         }
     }

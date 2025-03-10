@@ -1,7 +1,3 @@
-"""
-This file is a skeleton for an experiment class, to copy and fill!
-"""
-
 import matplotlib.pyplot as plt
 
 from qm.qua import *
@@ -15,8 +11,15 @@ from qxp.utils.plot import clean_axes, adjust_axes_limits
 
 
 class SkeletonExperiment(BaseQuaExperiment):
-    experiment_name = 'skeleton_experiment'
-    description = """Short description."""
+    """
+    EXPERIMENT NAME
+    You should copy this file and use it as a basis for a QUA experiment class.
+
+    Prerequisites:
+        - Having measured ...
+    """
+    identifier = 'skeleton_experiment'
+    display_name = 'Skeleton experiment'
 
     def __init__(self, param, **kwargs):
         """
@@ -50,7 +53,7 @@ class SkeletonExperiment(BaseQuaExperiment):
         q_rawdata = result_handles.get("Q").fetch_all()
         iteration = result_handles.get("iteration").fetch_all()
 
-        readout_pulse_length = self.exp_config['readout']['pulse_length']
+        readout_pulse_length = self.exp_config['readout']['ro_pulse_length']
         iq_data = u.demod2volts(i_rawdata + 1j * q_rawdata, readout_pulse_length, single_demod=True)
         data = {
             'iq_data': iq_data,
@@ -58,17 +61,17 @@ class SkeletonExperiment(BaseQuaExperiment):
         }
         return data
 
-    def live_plotting(self, job, result_handles):
+    def live_plotting(self, job):
         fig, axs = plt.subplots()
         interrupt_on_close(fig, job)  # Interrupt the job when closing the figure
 
         # SET THE TITLE AND LABELS
         ...
-        fig.canvas.manager.set_window_title(f'{self.experiment_name}: {self.start_timestamp}')
+        fig.canvas.manager.set_window_title(f'{self.identifier}: {self.start_timestamp}')
 
-        while result_handles.is_processing():
+        while job.result_handles.is_processing():
             # Process the data
-            data = self.get_data(result_handles)
+            data = self.get_data(job.result_handles)
             ...
 
             # Plot the results

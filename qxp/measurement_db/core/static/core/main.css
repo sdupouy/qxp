@@ -1,0 +1,66 @@
+#navbar {
+    background-color: #ea9e00;
+}
+
+#logo {
+    border: solid 1px white;
+    margin-right: 10px;
+}
+
+#nav-buttons a {
+    color: white;
+    border-color: white;
+}
+
+#nav-buttons a:hover {
+    background-color: white;
+    color: #ea9e00;
+}
+
+.index-card-img-container {
+    max-height: 300px;
+    overflow: hidden;
+}
+
+.index-card-img-container img {
+    border-bottom-left-radius: var(--bs-border-radius) !important;
+    object-fit: cover;
+}
+
+.image-hover {
+    position: relative;
+    cursor: zoom-in;
+}
+
+.image-hover img {
+    transition: transform 0.3s ease-in-out;
+}
+
+.image-hover:hover img {
+    transform: scale(1.1);
+}
+
+.image-hover::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3); /* Grey transparent overlay */
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    border-bottom-left-radius: 8px; /* Match the image border */
+}
+
+.image-hover:hover::after {
+    opacity: 1;
+}
+
+table a {
+    text-decoration: none;
+}
+
+table a:hover {
+    text-decoration: underline;
+}

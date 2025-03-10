@@ -28,15 +28,23 @@ def ns2cycle(t):
     return t // 4
 
 
-def wait_until_job_is_paused(current_job):
+def wait_until_job_is_paused(job):
     """
     Waits until the OPX FPGA reaches the pause statement.
     Used when the OPX sequence needs to be synchronized with an external parameter sweep.
 
     Args:
-        current_job: the job object.
+        job: the job object.
     """
-    while not current_job.is_paused():
+    while not job.is_paused():
         time.sleep(0.1)
         pass
     return True
+
+
+def result_handles_to_data_dict(result_handles):
+    """ Build a data dictionary from a StreamingResultFetcher (result_handles) object. """
+    data_dict = {}
+    for name, handle in result_handles:
+        data_dict[name] = handle.fetch_all()
+    return data_dict

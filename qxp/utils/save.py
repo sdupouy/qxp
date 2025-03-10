@@ -31,37 +31,37 @@ def get_experiment_params(experiment):
     return experiment_params
 
 
-def make_data_save_path(experiment_name, timestamp):
+def make_data_save_path(identifier, timestamp):
     """ Return the saving path for an experiment's data, creating the directories if needed.
     Args:
-        experiment_name: Experiment name.
+        identifier: Experiment identifier.
         timestamp: Experiment self.start_timestamp.
     """
-    save_path = COOLDOWN_SAVE_PATH / DATA_DIRNAME / experiment_name
+    save_path = COOLDOWN_SAVE_PATH / DATA_DIRNAME / identifier
     save_path.mkdir(parents=True, exist_ok=True)
     save_path = save_path.joinpath(timestamp).with_suffix('.h5')
     return str(save_path)  # needs to be a string for HDF5 saving
 
 
-def make_figure_save_path(experiment_name, timestamp):
+def make_figure_save_path(identifier, timestamp):
     """ Return the saving path for an experiment's figure, creating the directories if needed.
     Args:
-        experiment_name: Experiment name.
+        identifier: Experiment identifier.
         timestamp: Experiment self.start_timestamp.
     """
-    save_path = COOLDOWN_SAVE_PATH / FIGURES_DIRNAME / experiment_name
+    save_path = COOLDOWN_SAVE_PATH / FIGURES_DIRNAME / identifier
     save_path.mkdir(parents=True, exist_ok=True)
     save_path = save_path.joinpath(timestamp).with_suffix('.png')
     return save_path
 
 
-def make_debug_script_save_path(experiment_name, timestamp):
+def make_debug_script_save_path(identifier, timestamp):
     """ Return the saving path for an experiment's debug script, creating the directories if needed.
     Args:
-        experiment_name: Experiment name.
+        identifier: Experiment identifier.
         timestamp: Experiment self.start_timestamp.
     """
-    save_path = COOLDOWN_SAVE_PATH / DEBUG_SCRIPTS_DIRNAME / experiment_name
+    save_path = COOLDOWN_SAVE_PATH / DEBUG_SCRIPTS_DIRNAME / identifier
     save_path.mkdir(parents=True, exist_ok=True)
     save_path = save_path.joinpath(timestamp).with_suffix('.py')
     return save_path  # must be a pathlib.Path object
@@ -126,9 +126,9 @@ def load_experiment(path, experiment):
         setattr(experiment, key, value)
 
 
-def get_latest_run_path(experiment_name):
+def get_latest_run_path(identifier):
     """ Get the path of the latest run of an experiment. """
-    save_path = COOLDOWN_SAVE_PATH / experiment_name
+    save_path = COOLDOWN_SAVE_PATH / identifier
     files = list(save_path.glob('*.h5'))
     return max(files, key=lambda x: datetime_from_timestamp(x.stem))
 

@@ -20,49 +20,69 @@ class OpticalTable(models.Model):
     def __str__(self):
         return f'{self.rack_name} ({str(self.datetime)})'
 
+    class Meta:
+        ordering = ['-datetime']
+
 
 class Cooldown(models.Model):
     number = models.PositiveIntegerField()
     datetime = models.DateTimeField(default=timezone.now)
+    warmup_datetime = models.DateTimeField(null=True, blank=True)
     chip = models.ForeignKey(Chip, on_delete=models.PROTECT)
     cabling = models.ImageField(upload_to='fridge_cablings/', null=True, blank=True)
     comment = models.TextField(blank=True)
+
+    @property
+    def is_cold(self):
+        return self.warmup_datetime is None
 
     def __str__(self):
         return f'{self.chip.name} # {self.number} ({str(self.datetime)})'
 
     class Meta:
         unique_together = [['number', 'chip']]
+        ordering = ['-datetime']
 
 
-class ChipElement(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+class Experiment(models.Model):
+    identifier = models.CharField(max_length=255, unique=True)
+    display_name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    module_name = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
-        return self.name
+        return self.identifier
 
 
 class ExperimentRun(models.Model):
-    name = models.CharField(max_length=255)
+    experiment = models.ForeignKey(Experiment, on_delete=models.PROTECT)
     datetime = models.DateTimeField(default=timezone.now)
     cooldown = models.ForeignKey(Cooldown, on_delete=models.PROTECT)
     optical_table = models.ForeignKey(OpticalTable, on_delete=models.PROTECT)
     data_path = models.CharField(max_length=255)
     comment = models.TextField(blank=True)
+    starred = models.BooleanField(default=False)
 
     def __str__(self):
-        return f'{self.name} of {self.cooldown.chip.name} ({str(self.datetime)})'
+        return f'{self.experiment.identifier} of {self.cooldown.chip.name} ({str(self.datetime)})'
+
+    class Meta:
+        ordering = ['-datetime']
 
 
 class Parameter(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    identifier = models.CharField(max_length=255)
+    display_name = models.CharField(max_length=255, blank=True)
     unit = models.CharField(max_length=255, blank=True)
-    chip_elements = models.ManyToManyField(ChipElement, blank=True)
     latex_notation = models.CharField(max_length=255, null=True, blank=True)
-    comment = models.TextField(blank=True)
+    description = models.TextField(blank=True)
+
+    @property
+    def display_name_or_identifier(self):
+        return self.display_name or self.identifier
 
     def __str__(self):
-        return self.name
+        return self.identifier
 
 
 class Measurement(models.Model):
@@ -73,4 +93,7 @@ class Measurement(models.Model):
     comment = models.TextField(blank=True)
 
     def __str__(self):
-        return f"{self.parameter.name} @ {self.experiment_run.datetime}"
+        return f"{self.parameter.identifier} @ {self.experiment_run.datetime}"
+
+    class Meta:
+        ordering = ['experiment_run']
