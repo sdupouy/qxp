@@ -4,15 +4,14 @@ import threading
 import matplotlib.pyplot as plt
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
 
-from qxp.config import (EXP_CONFIG, get_qua_config, QOP_IP, QOP_PORT, CLUSTER_NAME, INSTRUMENTS_CONFIG, CHIP_NAME,
-                        COOLDOWN_NUMBER, RACK_NAME, MPLSTYLE_PATH)
+from qxp.config import EXP_CONFIG, get_qua_config, OPX_CONNECTION, INSTRUMENTS_CONFIG, MPLSTYLE_PATH
 from qxp.utils.config import update_nested_dict
+from qxp.utils.database import current_cooldown
 from qxp.utils.instruments import initialize_instruments_from_config, turn_off_instruments_from_config
 from qxp.utils.save import get_current_timestamp, get_experiment_params, get_latest_run_path, \
     save_dict_to_hdf5, load_dict_from_hdf5, datetime_from_timestamp, make_figure_save_path, \
     make_debug_script_save_path, make_data_save_path
-from qxp.measurement_db.core.models import Cooldown, OpticalTable, ExperimentRun, Parameter, Measurement, Experiment, \
-    Chip
+from qxp.measurement_db.core.models import OpticalTable, ExperimentRun, Parameter, Measurement, Experiment
 
 plt.style.use(MPLSTYLE_PATH)
 
@@ -103,7 +102,11 @@ class BaseQuaExperiment(ABC):
 
     def run_qua_program(self, prog, simulate=False):
         # Open Communication with the QOP
-        qmm = QuantumMachinesManager(host=QOP_IP, port=QOP_PORT, cluster_name=CLUSTER_NAME)
+        qmm = QuantumMachinesManager(
+            host=OPX_CONNECTION['host'],
+            port=OPX_CONNECTION['port'],
+            cluster_name=OPX_CONNECTION['cluster_name']
+        )
 
         # Save the QUA debug script
         debug_script = generate_qua_script(prog=prog, config=self.qua_config)
@@ -159,12 +162,11 @@ class BaseQuaExperiment(ABC):
                 'module_name': self.__class__.__module__,
             }
         )[0]
-        cooldown = Cooldown.objects.get(chip__name=CHIP_NAME, number=COOLDOWN_NUMBER)
-        optical_table = OpticalTable.objects.filter(rack_name=RACK_NAME).latest('datetime')
+        optical_table = OpticalTable.objects.latest('datetime')
         experiment_run = ExperimentRun(
             experiment=experiment,
             datetime=datetime_from_timestamp(self.start_timestamp),
-            cooldown=cooldown,
+            cooldown=current_cooldown(),
             optical_table=optical_table,
             data_path=self.save_path,
             comment=self.comment,
@@ -176,15 +178,13 @@ class BaseQuaExperiment(ABC):
     def save_measured_params_to_db(self):
         """ Save the measured parameters to the database. """
         if self.measured_db_params:
-            chip = Chip.objects.get(name=CHIP_NAME)
             experiment_run = ExperimentRun.objects.get(id=self.experiment_run_id)
-
             for key, value in self.measured_db_params.items():
                 if isinstance(value, (tuple, list)) and len(value) == 2:
                     value, uncertainty = value  # unpack (value, uncertainty) tuples
                 else:
                     uncertainty = None
-                parameter = Parameter.objects.get_or_create(identifier=key, chip=chip)[0]
+                parameter = Parameter.objects.get_or_create(identifier=key)[0]
                 measurement = Measurement(
                     parameter=parameter,
                     value=value,

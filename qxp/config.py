@@ -1,38 +1,36 @@
 """ Global configuration file.
 Here are defined the configuration parameters that will be used by the experiment classes.
-Per-experiment (local) configurations can be placed within the corresponding experiment directory.
-The local configuration to be used is specified in the EXPERIMENT_CONFIG_PATH constant.
+Per-experiment (local) configurations are placed within the user directory at EXPERIMENT_CONFIG_PATH.
 """
 
 from pathlib import Path
+import os
+import django
 
-from qxp.utils.config import load_experiment_config_module
+from qxp.utils.config import get_project_dir, load_experiment_config_module
 
 
-BASE_DIR = Path(__file__).resolve().parent
-EXPERIMENT_CONFIG_PATH = BASE_DIR / 'experiments/autocat/config/experiment_config.py'
+# setup Django (should only run once)
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'qxp.measurement_db.settings')
+django.setup()
+
+# Global configuration
+QXP_PROJECT_DIR = Path(get_project_dir())  # The qxp project directory
+EXPERIMENT_CONFIG_PATH = QXP_PROJECT_DIR / 'qxp_config.py'  # Path to the user experiment config
 DATA_DIRNAME = 'data'
 DEBUG_SCRIPTS_DIRNAME = 'debug_scripts'
 FIGURES_DIRNAME = 'figures'
 TIMESTAMP_FORMAT = "%d-%m-%Y_%Hh%Mm%S"
-MPLSTYLE_PATH = BASE_DIR / 'experiments/autocat/config/basic.mplstyle'
 
-# OPX connection
-CLUSTER_NAME = 'Cluster_1'
-QOP_IP = '192.168.0.114'
-QOP_PORT = 9510
+# Load experiment configuration from the local module.
+experiment_config = load_experiment_config_module(EXPERIMENT_CONFIG_PATH)  # The user configuration module
 
-
-"""
-Load experiment configuration from the local module. 
-"""
-experiment_config = load_experiment_config_module(EXPERIMENT_CONFIG_PATH)
-get_qua_config = experiment_config.get_qua_config  # function that returns the QUA config
-BASE_SAVE_PATH = experiment_config.BASE_SAVE_PATH
-CHIP_NAME = experiment_config.CHIP_NAME
-COOLDOWN_NUMBER = experiment_config.COOLDOWN_NUMBER
-RACK_NAME = experiment_config.RACK_NAME
+# These are extracted from the user config
+CURRENT_CHIP = getattr(experiment_config, 'FORCE_CURRENT_CHIP', None)  # If not specified, fall back to the chip of the latest cooldown
+MPLSTYLE_PATH = experiment_config.MPLSTYLE_PATH
 EXP_CONFIG = experiment_config.EXP_CONFIG
+OPX_CONNECTION = experiment_config.OPX_CONNECTION
 INSTRUMENTS_CONFIG = experiment_config.INSTRUMENTS_CONFIG
+get_qua_config = experiment_config.get_qua_config  # Function that returns the QUA config
 
-COOLDOWN_SAVE_PATH = Path(BASE_SAVE_PATH, CHIP_NAME, f'cooldown_{COOLDOWN_NUMBER}')
+STORAGE_PATH = QXP_PROJECT_DIR / 'storage'

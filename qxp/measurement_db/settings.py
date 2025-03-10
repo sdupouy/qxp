@@ -11,9 +11,11 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from qxp.utils.config import get_project_dir
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent
+QXP_PROJECT_DIR = Path(get_project_dir())  # The qxp project directory
 
 
 # Quick-start development settings - unsuitable for production
@@ -78,7 +80,7 @@ WSGI_APPLICATION = 'qxp.measurement_db.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': QXP_PROJECT_DIR / 'database/db.sqlite3',
     }
 }
 
@@ -119,7 +121,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = QXP_PROJECT_DIR / 'database/media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

@@ -1,4 +1,29 @@
 import importlib.util
+import os
+import sys
+
+
+def get_project_dir():
+    """ Get the current qxp project directory. """
+    project_dir = os.getenv("QXP_PROJECT_DIR")
+    if project_dir:
+        return project_dir
+
+    # Try to detect automatically by looking for a marker file
+    current_dir = os.getcwd()
+    root_dir = os.path.abspath(os.sep)
+
+    while current_dir != root_dir:
+        if os.path.exists(os.path.join(current_dir, "qxp_config.py")):
+            os.environ["QXP_PROJECT_DIR"] = current_dir
+            print(f"Warning: The qxp project directory was determined automatically to {current_dir}.")
+            print("To remove this warning, set the QXP_PROJECT_DIR environment variable.")
+            return current_dir
+        current_dir = os.path.dirname(current_dir)
+
+    print("Error: Could not determine the qxp project directory.")
+    print("Please set the QXP_PROJECT_DIR environment variable.")
+    sys.exit(1)
 
 
 def load_experiment_config_module(experiment_config_path):

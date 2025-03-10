@@ -21,3 +21,12 @@ authors = [
 ]
 description = "A Quantum Experimentation Platform."
 readme = "README.md"
+
+[project.scripts]
+qxp-create-project = "qxp.qxp_admin:create_project"
+
+[tool.setuptools]
+packages = ["qxp"]
+
+[tool.setuptools.package-data]
+qxp = ["project_template/**"]

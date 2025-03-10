@@ -1,14 +1,25 @@
 # Quantum Experimentation Platform (qxp)
 
-This software aims at providing:
-- a way to automatize measurements on a Quantum Machines setup
-- a way to efficiently keep track of experimental data and the setup that was used for acquisition
-- a way to manage and display measured data through a web interface
+**qxp** is a framework written in Python for developing quantum experiments on a Quantum Machines setup, with
+automation and reproducibility in mind.
+
+This software aims at providing a way to:
+- easily automatize measurements on a Quantum Machines setup
+- efficiently keep track of experimental data and the setup that was used for acquisition
+- manage and display measured data through a web interface (based on Django)
+- interact with common lab instruments
+- enforce organized coding patterns and directory structure
 
 ## Installation
+To install qxp in editable mode, run:
+- `pip install -e .`
+
+Then:
 - `cd` into the project root
-- `pip install . -e`
-- `python manage.py migrate`
+- `qxp-create-project <your-project-name>`
+
+To launch the webpanel:
+- `python manage.py runserver`
 
 ### To launch the web interface:
 - `python manage.py runserver`

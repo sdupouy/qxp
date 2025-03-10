@@ -13,7 +13,7 @@ class Chip(models.Model):
 
 class OpticalTable(models.Model):
     datetime = models.DateTimeField(default=timezone.now)
-    rack_name = models.CharField(max_length=255)
+    rack_name = models.CharField(max_length=255, blank=True)
     cabling = models.ImageField(upload_to='optical_tables/', null=True, blank=True)
     comment = models.TextField(blank=True)
 
