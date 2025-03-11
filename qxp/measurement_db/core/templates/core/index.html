@@ -1,59 +1,92 @@
 {% extends 'core/base.html' %}
+{% load static %}
+
+{% block meta %}
+	<meta name="csrf-token" content="{{ csrf_token }}">
+{% endblock %}
 
 {% block content %}
   <div class="row mb-3">
     <div class="col-md-6 mb-3">
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <h4 class="mb-0">Current cooldown</h4>
-          {% if cooldown.is_cold %}
-          	<span class="badge text-bg-primary">status: cold <i class="bi bi-snow"></i></span>
-          {% else %}
-          	<span class="badge text-bg-danger">status: warm</span>
-          {% endif %}
+          <h4 class="mb-0">Current chip</h4>
+          <a href="{% url 'chip-create' %}" class="btn btn-outline-primary" role="button"><i class="bi bi-plus-circle-fill me-2"></i>New chip</a>
         </div>
-        {% if cooldown %}
+        {% if chip %}
           <div class="row g-0">
-            <div class="col-md-4 index-card-img-container image-hover" data-bs-toggle="modal" data-bs-target="#cooldownCablingModal">
-              <img src="{{ cooldown.cabling.url }}" class="img-fluid" alt="cooldown wiring">
+            <div class="col-md-4 index-card-img-container image-hover" data-bs-toggle="modal" data-bs-target="#chipPictureModal">
+              <img src="{{ chip.picture.url }}" class="img-fluid" alt="chip picture">
             </div>
             <div class="col-md-8">
               <div class="card-body">
-                <h5># {{ cooldown.number }}</h5>
-                <p class="card-text">{{ cooldown.comment }}</p>
-                <p class="card-text"><small class="text-body-secondary">Cooled down on {{ cooldown.datetime }}</small></p>
+                <h5 class="card-title">{{ chip.name }}</h5>
+                <p class="card-text">{{ chip.comment }}</p>
               </div>
             </div>
           </div>
         {% else %}
           <div class="p-3">
-            <p>No cooldown yet.</p>
-            <a href="{% url 'admin:core_cooldown_add' %}" class="btn btn-outline-primary" role="button">Add a cooldown</a>
+            <p>No chip yet.</p>
           </div>
         {% endif %}
       </div>
     </div>
     
-    {% if cooldown %}
+    {% if chip %}
       <div class="col-md-6 mb-3">
         <div class="card">
-          <div class="card-header">
-            <h4 class="mb-0">Current chip</h4>
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+            <h4 class="mb-0 me-4">Current cooldown</h4>
+            {% if cooldown.is_cold %}
+              <span class="badge text-bg-primary">status: cold <i class="bi bi-snow"></i></span></div>
+              <button id="warmup-btn" class="btn btn-outline-danger" data-entry-id="{{ cooldown.id }}">Warm up</button>
+            {% else %}
+              <span class="badge text-bg-danger">status: warm</span></div>
+              <a href="{% url 'cooldown-create' %}" class="btn btn-outline-primary" role="button"><i class="bi bi-plus-circle-fill me-2"></i>New cooldown</a>
+            {% endif %}
           </div>
-          <div class="row g-0">
-            <div class="col-md-4 index-card-img-container image-hover" data-bs-toggle="modal" data-bs-target="#chipPictureModal">
-              <img src="{{ cooldown.chip.picture.url }}" class="img-fluid" alt="chip picture">
-            </div>
-            <div class="col-md-8">
-              <div class="card-body">
-                <h5 class="card-title">{{ cooldown.chip.name }}</h5>
-                <p class="card-text">{{ cooldown.chip.comment }}</p>
+          {% if cooldown %}
+            <div class="row g-0">
+              <div class="col-md-4 index-card-img-container image-hover" data-bs-toggle="modal" data-bs-target="#cooldownCablingModal">
+                <img src="{{ cooldown.cabling.url }}" class="img-fluid" alt="cooldown wiring">
+              </div>
+              <div class="col-md-8">
+                <div class="card-body">
+                  <h5># {{ cooldown.number }}</h5>
+                  <p class="card-text">{{ cooldown.comment }}</p>
+                  <p class="card-text">
+                    <small class="text-body-secondary">Cooled down on {{ cooldown.datetime }}</small>
+                    {% if cooldown.warmup_datetime %}
+                      <br><small class="text-body-secondary">Warmed up on {{ cooldown.warmup_datetime }}</small>
+                    {% endif %}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          {% else %}
+            <div class="p-3">
+              <p>No cooldown yet.</p>
+            </div>
+          {% endif %}
         </div>
       </div>
     {% endif %}
+  </div>
+  
+  <div class="modal fade" id="chipPictureModal" tabindex="-1" aria-labelledby="chipPictureModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="chipPictureModalLabel">Chip {{ chip.name }}</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <img src="{{ chip.picture.url }}" class="img-fluid" alt="chip picture">
+        </div>
+      </div>
+    </div>
   </div>
   
   <div class="modal fade" id="cooldownCablingModal" tabindex="-1" aria-labelledby="cooldownCablingModalLabel" aria-hidden="true">
@@ -65,20 +98,6 @@
         </div>
         <div class="modal-body">
           <img src="{{ cooldown.cabling.url }}" class="img-fluid" alt="cooldown wiring">
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="modal fade" id="chipPictureModal" tabindex="-1" aria-labelledby="chipPictureModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h1 class="modal-title fs-5" id="chipPictureModalLabel">Chip {{ cooldown.chip.name }}</h1>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <img src="{{ cooldown.chip.picture.url }}" class="img-fluid" alt="chip picture">
         </div>
       </div>
     </div>
@@ -153,5 +172,9 @@
       {% endif %}
     </div>
   </div>
-
+  
+  <script src="{% static 'core/js/get_cookie.js' %}"></script>
+  {% if cooldown.is_cold %}
+    <script src="{% static 'core/js/warmup_button.js' %}"></script>
+  {% endif %}
 {% endblock %}
