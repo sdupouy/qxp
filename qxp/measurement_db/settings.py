@@ -40,6 +40,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'crispy_forms',
+    'crispy_bootstrap5',
+    'django_select2',
     'qxp.measurement_db.core',  # core app for storing calibration values
 ]
 
@@ -127,3 +130,10 @@ MEDIA_ROOT = QXP_PROJECT_DIR / 'database/media'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Crispy forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+# Select2
+SELECT2_THEME = 'bootstrap-5'

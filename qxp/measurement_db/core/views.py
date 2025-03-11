@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 
 from .models import Cooldown, ExperimentRun, Measurement, Parameter, Chip
-
+from .forms import CooldownForm
 
 class IndexView(TemplateView):
     template_name = "core/index.html"
@@ -33,7 +33,7 @@ class CooldownDetailView(DetailView):
 
 class CooldownCreateView(CreateView):
     model = Cooldown
-    fields = '__all__'
+    form_class = CooldownForm
 
 
 def warmup(request, pk):
