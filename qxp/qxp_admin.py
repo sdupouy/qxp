@@ -1,6 +1,8 @@
 import os
+import sys
 import shutil
 import importlib.resources as pkg_resources
+
 import qxp
 import django
 from django.core.management import call_command
@@ -11,11 +13,10 @@ def migrate_project(qxp_project_dir):
     os.environ['QXP_PROJECT_DIR'] = qxp_project_dir
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "qxp.measurement_db.settings")
     django.setup()  # Initialize Django before running management commands
-    call_command("migrate")  # Run migrations
+    call_command("migrate")
 
 
 def create_project():
-    import sys
     if len(sys.argv) != 2:
         print("Usage: qxp-create-project projectname")
         return
@@ -31,3 +32,9 @@ def create_project():
     shutil.copytree(template_dir, target_dir)
     print(f"Project '{project_name}' created successfully at {target_dir}.")
     migrate_project(target_dir)
+
+def start_webpanel():
+    """Run the Django server."""
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "qxp.measurement_db.settings")
+    django.setup()  # Initialize Django before running management commands
+    call_command("runserver")

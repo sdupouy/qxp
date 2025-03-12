@@ -7,15 +7,15 @@
 
 {% block content %}
   <div class="row mb-3">
-    <div class="col-md-6 mb-3">
+    <div class="col-md-4 mb-3">
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h4 class="mb-0">Current chip</h4>
-          <a href="{% url 'chip-create' %}" class="btn btn-outline-primary" role="button"><i class="bi bi-plus-circle-fill me-2"></i>New chip</a>
+          <a href="{% url 'chip-create' %}" class="btn btn-outline-primary" role="button"><i class="bi bi-plus-circle-fill me-2"></i>New</a>
         </div>
         {% if chip %}
           <div class="row g-0">
-            <div class="col-md-4 index-card-img-container image-hover" data-bs-toggle="modal" data-bs-target="#chipPictureModal">
+            <div class="col-md-4 card-img-container image-hover rounded-bottom-left" data-bs-toggle="modal" data-bs-target="#chipPictureModal">
               <img src="{{ chip.picture.url }}" class="img-fluid" alt="chip picture">
             </div>
             <div class="col-md-8">
@@ -34,22 +34,19 @@
     </div>
     
     {% if chip %}
-      <div class="col-md-6 mb-3">
+      <div class="col-md-4 mb-3">
         <div class="card">
           <div class="card-header d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
             <h4 class="mb-0 me-4">Current cooldown</h4>
             {% if cooldown.is_cold %}
-              <span class="badge text-bg-primary">status: cold <i class="bi bi-snow"></i></span></div>
               <button id="warmup-btn" class="btn btn-outline-danger" data-entry-id="{{ cooldown.id }}">Warm up</button>
             {% else %}
-              <span class="badge text-bg-danger">status: warm</span></div>
-              <a href="{% url 'cooldown-create' %}" class="btn btn-outline-primary" role="button"><i class="bi bi-plus-circle-fill me-2"></i>New cooldown</a>
+              <a href="{% url 'cooldown-create' %}" class="btn btn-outline-primary" role="button"><i class="bi bi-plus-circle-fill me-2"></i>New</a>
             {% endif %}
           </div>
           {% if cooldown %}
             <div class="row g-0">
-              <div class="col-md-4 index-card-img-container image-hover" data-bs-toggle="modal" data-bs-target="#cooldownCablingModal">
+              <div class="col-md-4 card-img-container image-hover rounded-bottom-left" data-bs-toggle="modal" data-bs-target="#cooldownCablingModal">
                 <img src="{{ cooldown.cabling.url }}" class="img-fluid" alt="cooldown wiring">
               </div>
               <div class="col-md-8">
@@ -57,9 +54,9 @@
                   <h5># {{ cooldown.number }}</h5>
                   <p class="card-text">{{ cooldown.comment }}</p>
                   <p class="card-text">
-                    <small class="text-body-secondary">Cooled down on {{ cooldown.datetime }}</small>
+                    <small class="text-body-secondary"><i class="bi bi-snow me-2"></i>{{ cooldown.datetime }}</small>
                     {% if cooldown.warmup_datetime %}
-                      <br><small class="text-body-secondary">Warmed up on {{ cooldown.warmup_datetime }}</small>
+                      <br><small class="text-body-secondary"><i class="bi bi-fire me-2"></i>{{ cooldown.warmup_datetime }}</small>
                     {% endif %}
                   </p>
                 </div>
@@ -68,6 +65,34 @@
           {% else %}
             <div class="p-3">
               <p>No cooldown yet.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if chip %}
+      <div class="col-md-4 mb-3">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Current optical table</h4>
+            <a href="{% url 'optical-table-create' %}" class="btn btn-outline-primary" role="button"><i class="bi bi-plus-circle-fill me-2"></i>New</a>
+          </div>
+          {% if optical_table %}
+            <div class="row g-0">
+              <div class="col-md-4 card-img-container image-hover rounded-bottom-left" data-bs-toggle="modal" data-bs-target="#opticalTableModal">
+                <img src="{{ optical_table.cabling.url }}" class="img-fluid" alt="optical table">
+              </div>
+              <div class="col-md-8">
+                <div class="card-body">
+                  <h5>Rack {{ optical_table.rack_name }}</h5>
+                  <p class="card-text">{{ optical_table.comment }}</p>
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <div class="p-3">
+              <p>No optical table yet.</p>
             </div>
           {% endif %}
         </div>
@@ -102,6 +127,20 @@
       </div>
     </div>
   </div>
+
+  <div class="modal fade" id="opticalTableModal" tabindex="-1" aria-labelledby="opticalTableModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="opticalTableModalLabel">Current optical table</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <img src="{{ optical_table.cabling.url }}" class="img-fluid" alt="Optical table">
+        </div>
+      </div>
+    </div>
+  </div>
   
   <div class="row">
     <div class="col-md-6">
@@ -113,12 +152,12 @@
             <tr>
               <th scope="col"></th>
               <th scope="col">Date</th>
-              <th scope="col">Name</th>
+              <th scope="col">Experiment</th>
             </tr>
           </thead>
           <tbody>
           {% for exp_run in exp_runs %}
-            <tr>
+            <tr onclick="window.location='{% url 'experiment-run-detail' exp_run.id %}'" class="clickable">
               <td>
                 {% if exp_run.starred %}
                   <i class="bi bi-star-fill"></i>
@@ -127,7 +166,7 @@
                 {% endif %}
               </td>
               <td>{{ exp_run.datetime }}</td>
-              <td>{{ exp_run.experiment.display_name }}</td>
+              <td><a href="{% url 'experiment-detail' exp_run.experiment.identifier %}">{{ exp_run.experiment.display_name }}</a></td>
             </tr>
           {% endfor %}
           </tbody>
@@ -146,7 +185,7 @@
           <thead>
             <tr>
               <th scope="col">Date</th>
-              <th scope="col">Name</th>
+              <th scope="col">Parameter</th>
               <th scope="col">Value</th>
             </tr>
           </thead>
@@ -154,7 +193,7 @@
           {% for measurement in measurements %}
             <tr>
               <td>{{ measurement.experiment_run.datetime }}</td>
-              <td><a href="{% url 'parameter-detail' measurement.parameter.id %}">{{ measurement.parameter.display_name_or_identifier }}</a></td>
+              <td><a href="{% url 'parameter-detail' measurement.parameter.identifier %}">{{ measurement.parameter.display_name_or_identifier }}</a></td>
               <td>
                 {{ measurement.value }}
                 {% if measurement.uncertainty %}

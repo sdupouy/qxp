@@ -24,7 +24,7 @@
   <div class="container">
     <a class="navbar-brand" href="{% url 'index' %}">
       <img src="{% static 'core/favicon/favicon.svg' %}" alt="Logo" width="34" height="34" id="logo">
-      Database webpanel
+      Database web panel
     </a>
     <div id="nav-buttons" class="d-flex">
       {% block navbar_links %}
@@ -34,7 +34,7 @@
   </div>
 </nav>
 
-<div class="container py-3">
+<div class="container py-4">
   {% block content %}
   {% endblock %}
 </div>

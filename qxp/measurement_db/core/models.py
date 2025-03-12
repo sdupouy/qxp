@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 
 
@@ -6,6 +7,9 @@ class Chip(models.Model):
     name = models.CharField(max_length=255, unique=True)
     picture = models.ImageField(upload_to='chip_pictures/', null=True, blank=True)
     comment = models.TextField(blank=True)
+
+    def get_absolute_url(self):
+        return reverse('chip-detail', kwargs={'pk': self.pk})
 
     def __str__(self):
         return self.name
@@ -36,6 +40,9 @@ class Cooldown(models.Model):
     def is_cold(self):
         return self.warmup_datetime is None
 
+    def get_absolute_url(self):
+        return reverse('cooldown-detail', kwargs={'pk': self.pk})
+
     def __str__(self):
         return f'{self.chip.name} # {self.number} ({str(self.datetime)})'
 
@@ -50,8 +57,14 @@ class Experiment(models.Model):
     description = models.TextField(blank=True)
     module_name = models.CharField(max_length=255, blank=True)
 
+    def get_absolute_url(self):
+        return reverse('experiment-detail', kwargs={'identifier': self.identifier})
+
     def __str__(self):
         return self.identifier
+
+    class Meta:
+        ordering = ['display_name']
 
 
 class ExperimentRun(models.Model):
@@ -62,6 +75,9 @@ class ExperimentRun(models.Model):
     data_path = models.CharField(max_length=255)
     comment = models.TextField(blank=True)
     starred = models.BooleanField(default=False)
+
+    def get_absolute_url(self):
+        return reverse('experiment-run-detail', kwargs={'pk': self.pk})
 
     def __str__(self):
         return f'{self.experiment.identifier} of {self.cooldown.chip.name} ({str(self.datetime)})'
@@ -80,6 +96,9 @@ class Parameter(models.Model):
     @property
     def display_name_or_identifier(self):
         return self.display_name or self.identifier
+
+    def get_absolute_url(self):
+        return reverse('parameter-detail', kwargs={'identifier': self.identifier})
 
     def __str__(self):
         return self.identifier

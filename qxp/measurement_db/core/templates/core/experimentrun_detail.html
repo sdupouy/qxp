@@ -1,0 +1,177 @@
+{% extends 'core/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+  <h1>Experiment run</h1>
+  {% if object.starred %}
+    <span class="badge text-bg-secondary mb-3">Starred<i class="bi bi-star-fill ms-2"></i></span>
+  {% endif %}
+
+  <dl>
+    <dt>Date</dt>
+    <dd>{{ object.datetime }}</dd>
+
+    <dt>Experiment</dt>
+    <dd>{{ object.experiment.display_name }}</dd>
+
+    <dt>Chip</dt>
+    <dd>{{ object.cooldown.chip.name }}</dd>
+
+    <dt>Data at</dt>
+    <dd>{{ object.data_path }}</dd>
+
+    {% if object.comment %}
+      <dt>Comment</dt>
+      <dd>
+        {{ object.comment }}
+      </dd>
+    {% endif %}
+  </dl>
+
+  {% if not object.comment %}
+    <form method="post" class="mb-3 bold-labels">
+      {% csrf_token %}
+      {{ form|crispy }}
+      <button type="submit" class="btn btn-primary">Add a comment</button>
+    </form>
+  {% endif %}
+
+  <h2>Setup</h2>
+  <div class="row my-3">
+    <div class="col-md-4 mb-3">
+      <div class="card">
+        <div class="card-header">
+          <h4 class="mb-0">Chip</h4>
+        </div>
+        <div class="row g-0">
+          <div class="col-md-4 card-img-container image-hover rounded-bottom-left" data-bs-toggle="modal" data-bs-target="#chipPictureModal">
+            <img src="{{ object.cooldown.chip.picture.url }}" class="img-fluid" alt="chip picture">
+          </div>
+          <div class="col-md-8">
+            <div class="card-body">
+              <h5 class="card-title">{{ object.cooldown.chip.name }}</h5>
+              <p class="card-text">{{ object.cooldown.chip.comment }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+      <div class="card">
+        <div class="card-header">
+          <h4 class="mb-0 me-4">Cooldown</h4>
+        </div>
+        <div class="row g-0">
+          <div class="col-md-4 card-img-container image-hover rounded-bottom-left" data-bs-toggle="modal" data-bs-target="#cooldownCablingModal">
+            <img src="{{ object.cooldown.cabling.url }}" class="img-fluid" alt="cooldown wiring">
+          </div>
+          <div class="col-md-8">
+            <div class="card-body">
+              <h5># {{ object.cooldown.number }}</h5>
+              <p class="card-text">{{ object.cooldown.comment }}</p>
+              <p class="card-text">
+                <small class="text-body-secondary"><i class="bi bi-snow me-2"></i>{{ object.cooldown.datetime }}</small>
+                {% if object.cooldown.warmup_datetime %}
+                  <br><small class="text-body-secondary"><i class="bi bi-fire me-2"></i>{{ object.cooldown.warmup_datetime }}</small>
+                {% endif %}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+      <div class="card">
+        <div class="card-header">
+          <h4 class="mb-0">Optical table</h4>
+        </div>
+        <div class="row g-0">
+          <div class="col-md-4 card-img-container image-hover rounded-bottom-left" data-bs-toggle="modal" data-bs-target="#opticalTableModal">
+            <img src="{{ object.optical_table.cabling.url }}" class="img-fluid" alt="optical table">
+          </div>
+          <div class="col-md-8">
+            <div class="card-body">
+              <h5>Rack {{ object.optical_table.rack_name }}</h5>
+              <p class="card-text">{{ object.optical_table.comment }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="chipPictureModal" tabindex="-1" aria-labelledby="chipPictureModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="chipPictureModalLabel">Chip {{ object.cooldown.chip.name }}</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <img src="{{ object.cooldown.chip.picture.url }}" class="img-fluid" alt="chip picture">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="cooldownCablingModal" tabindex="-1" aria-labelledby="cooldownCablingModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="cooldownCablingModalLabel">Cabling</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <img src="{{ object.cooldown.cabling.url }}" class="img-fluid" alt="cooldown wiring">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="opticalTableModal" tabindex="-1" aria-labelledby="opticalTableModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="opticalTableModalLabel">Optical table</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <img src="{{ object.optical_table.cabling.url }}" class="img-fluid" alt="Optical table">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Measured parameters</h2>
+  {% if not object.measurement_set.empty %}
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">Date</th>
+          <th scope="col">Parameter</th>
+          <th scope="col">Value</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for measurement in object.measurement_set.all %}
+        <tr>
+          <td>{{ measurement.experiment_run.datetime }}</td>
+          <td><a href="{% url 'parameter-detail' measurement.parameter.identifier %}">{{ measurement.parameter.display_name_or_identifier }}</a></td>
+          <td>
+            {{ measurement.value }}
+            {% if measurement.uncertainty %}
+              &plusmn; {{ measurement.uncertainty }}
+            {% endif %}
+            {{ measurement.parameter.unit }}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No measured parameter associated to this experiment run.</p>
+  {% endif %}
+
+{% endblock %}

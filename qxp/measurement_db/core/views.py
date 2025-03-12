@@ -3,8 +3,9 @@ from django.shortcuts import get_object_or_404, redirect
 from django.http import JsonResponse
 from django.utils import timezone
 from django.urls import reverse_lazy
+from django.views.generic.edit import ModelFormMixin
 
-from .models import Cooldown, ExperimentRun, Measurement, Parameter, Chip
+from .models import Cooldown, ExperimentRun, Measurement, Parameter, Chip, OpticalTable, Experiment
 from .forms import CooldownForm
 
 class IndexView(TemplateView):
@@ -18,6 +19,8 @@ class IndexView(TemplateView):
             context['chip'] = cooldown.chip
             context['exp_runs'] = ExperimentRun.objects.filter(cooldown=context['cooldown']).order_by('-datetime')[:10]
             context['measurements'] = Measurement.objects.all()[:10]
+            if OpticalTable.objects.exists():
+                context['optical_table'] = OpticalTable.objects.latest('datetime')
         else:
             # if there is no cooldown yet, at least display the last chip
             context['chip'] = Chip.objects.last()
@@ -65,8 +68,43 @@ class ChipCreateView(CreateView):
     success_url = reverse_lazy('index')
 
 
+class OpticalTableCreateView(CreateView):
+    model = OpticalTable
+    fields = '__all__'
+    success_url = reverse_lazy('index')
+
+
+class ExperimentListView(ListView):
+    model = Experiment
+
+
+class ExperimentDetailView(DetailView):
+    model = Experiment
+    slug_field = 'identifier'
+    slug_url_kwarg = 'identifier'
+
+
 class ExperimentRunListView(ListView):
     model = ExperimentRun
+
+
+class ExperimentRunDetailView(DetailView, ModelFormMixin):
+    model = ExperimentRun
+    fields = ['comment']
+
+    def get_form(self, *args, **kwargs):
+        form = super().get_form(*args, **kwargs)
+        form.fields['comment'].widget.attrs.update({'rows': 3, 'cols': 40})
+        return form
+
+    def post(self, request, *args, **kwargs):
+        # Get the object being displayed
+        self.object = self.get_object()
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
 
 
 class MeasurementListView(ListView):
@@ -75,3 +113,5 @@ class MeasurementListView(ListView):
 
 class ParameterDetailView(DetailView):
     model = Parameter
+    slug_field = 'identifier'
+    slug_url_kwarg = 'identifier'

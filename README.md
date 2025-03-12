@@ -15,18 +15,33 @@ To install qxp in editable mode, run:
 - `pip install -e .`
 
 Then:
-- `cd` into the project root
+- `cd` where you want to create your project directory
 - `qxp-create-project <your-project-name>`
 
-To launch the webpanel:
-- `python manage.py runserver`
+## Running experiments
+Write your experiments in the `/experiments` directory.  
+An experiment is a class that inherits from `qxp.core.BaseQuaExperiment`.
 
-### To launch the web interface:
-- `python manage.py runserver`
-- open a web browser and go to http://127.0.0.1:8000 
+You can then import your experiment classes as Python modules like this:  
+`from qxp.experiments.your_experiment import YourExperiment`.
+
+Run your experiment like this:  
+```python
+exp = YourExperiment()
+exp.configure_and_run()
+```
+
+## To launch the web panel:
+- Run `qxp-start-webpanel` in the terminal from within the project directory
+- Open a web browser and go to http://127.0.0.1:8000 
 
 ## TODO list
 - fill up templates for the measurement database
+  - parameter_detail
+  - cooldown_list
+  - cooldown_detail
+  - chip_list
+  - chip_detail
 - improve the admin panel
 - implement other experiments
     - readout duration optimization

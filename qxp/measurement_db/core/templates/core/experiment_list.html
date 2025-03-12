@@ -1,0 +1,28 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+  <h1>Registered experiments</h1>
+  
+  {% if object_list %}
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Identifier</th>
+          <th scope="col">Module name</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for experiment in object_list %}
+        <tr>
+          <th scope="row"><a href="{% url 'experiment-detail' experiment.identifier %}">{{ experiment.display_name }}</a></th>
+          <td>{{ experiment.identifier }}</td>
+          <td>{{ experiment.module_name }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No experiment registered yet.</p>
+  {% endif %}
+{% endblock %}

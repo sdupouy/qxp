@@ -27,6 +27,7 @@ readme = "README.md"
 
 [project.scripts]
 qxp-create-project = "qxp.qxp_admin:create_project"
+qxp-start-webpanel = "qxp.qxp_admin:start_webpanel"
 
 [tool.setuptools]
 packages = ["qxp"]

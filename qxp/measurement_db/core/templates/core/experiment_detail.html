@@ -1,0 +1,48 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+  <h1>{{ object.display_name }}</h1>
+
+  <ul>
+    <li><strong>Identifier:</strong> {{ object.identifier }}</li>
+    <li><strong>Module name:</strong> {{ object.module_name }}</li>
+  </ul>
+
+  {% if object.description %}
+    <p>{{ object.description }}</p>
+  {% else %}
+    <p>No description available.</p>
+  {% endif %}
+
+  <h2>Latest runs</h2>
+  {% if object.experimentrun_set %}
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col"></th>
+          <th scope="col">Date</th>
+          <th scope="col">Chip</th>
+          <th scope="col">Cooldown</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for exp_run in object.experimentrun_set.all %}
+        <tr>
+          <td>
+            {% if exp_run.starred %}
+              <i class="bi bi-star-fill"></i>
+            {% else %}
+              <i class="bi bi-star"></i>
+            {% endif %}
+          </td>
+          <td>{{ exp_run.datetime }}</td>
+          <td>{{ exp_run.cooldown.chip.name }}</td>
+          <td>{{ exp_run.cooldown.number }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No run logged in the database yet.</p>
+  {% endif %}
+{% endblock %}
