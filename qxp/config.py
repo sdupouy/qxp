@@ -23,6 +23,7 @@ DATA_DIRNAME = 'data'
 DEBUG_SCRIPTS_DIRNAME = 'debug_scripts'
 FIGURES_DIRNAME = 'figures'
 TIMESTAMP_FORMAT = "%d-%m-%Y_%Hh%Mm%S"
+TIME_ZONE = 'Europe/Paris'
 
 # Load experiment configuration from the local module.
 experiment_config = load_experiment_config_module(EXPERIMENT_CONFIG_PATH)  # The user configuration module

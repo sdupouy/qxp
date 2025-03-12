@@ -14,16 +14,14 @@ def current_chip():
     return current_cooldown().chip
 
 
-def fetch_last_measured_value(parameter_name):
+def fetch_last_measured_value(parameter_ident):
     """ Fetch last measured value from database.
     Args:
-        parameter_name: The name of the parameter.
+        parameter_ident: The identifier of the parameter.
     """
-    try:
-        measurement = Measurement.objects.filter(
-            experiment_run__cooldown__chip=current_chip(),
-            parameter__name=parameter_name
-        ).order_by('experiment_run__datetime').last()
-    except Measurement.DoesNotExist:
-        return None
-    return measurement.value
+    measurement = Measurement.objects.filter(
+        experiment_run__cooldown__chip=current_chip(),
+        parameter__identifier=parameter_ident
+    ).order_by('experiment_run__datetime').last()
+    if measurement:
+        return measurement.value

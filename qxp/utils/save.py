@@ -1,22 +1,25 @@
 import inspect
 from datetime import datetime
+import pytz
 import h5py
 import json
 from pathlib import Path
 
-from qxp.config import (TIMESTAMP_FORMAT, DATA_DIRNAME, FIGURES_DIRNAME,
-                        DEBUG_SCRIPTS_DIRNAME, STORAGE_PATH)
+from qxp.config import TIMESTAMP_FORMAT, DATA_DIRNAME, FIGURES_DIRNAME, DEBUG_SCRIPTS_DIRNAME, STORAGE_PATH, TIME_ZONE
 from qxp.utils.database import current_chip, current_cooldown
 
 
 def get_current_timestamp():
-    """ Get the current timestamp as a string. """
-    return datetime.now().strftime(TIMESTAMP_FORMAT)
+    """ Get the current timestamp as a tz-aware ISO formatted string. """
+    local_timezone = pytz.timezone(TIME_ZONE)
+    return datetime.now(local_timezone).isoformat()
 
 
-def datetime_from_timestamp(timestamp):
-    """ Get a python datetime from a formatted timestamp. """
-    return datetime.strptime(timestamp, TIMESTAMP_FORMAT)
+def display_timestamp(timestamp):
+    """ Formats a tz-aware ISO timestamp to a user-friendly string in local time (e.g. to create filenames). """
+    local_timezone = pytz.timezone(TIME_ZONE)
+    d = datetime.fromisoformat(timestamp).astimezone(local_timezone)  # ensure we display in the local timezone
+    return d.strftime(TIMESTAMP_FORMAT)
 
 
 def get_experiment_params(experiment):
@@ -40,8 +43,9 @@ def make_data_save_path(experiment_ident, timestamp):
     """ Return the saving path for an experiment's data, creating the directories if needed.
     Args:
         experiment_ident: Experiment identifier.
-        timestamp: Experiment self.start_timestamp.
+        timestamp: Experiment self.start_time.
     """
+    timestamp = display_timestamp(timestamp)
     save_path = cooldown_save_path() / DATA_DIRNAME / experiment_ident
     save_path.mkdir(parents=True, exist_ok=True)
     save_path = save_path.joinpath(timestamp).with_suffix('.h5')
@@ -52,8 +56,9 @@ def make_figure_save_path(experiment_ident, timestamp):
     """ Return the saving path for an experiment's figure, creating the directories if needed.
     Args:
         experiment_ident: Experiment identifier.
-        timestamp: Experiment self.start_timestamp.
+        timestamp: Experiment self.start_time.
     """
+    timestamp = display_timestamp(timestamp)
     save_path = cooldown_save_path() / FIGURES_DIRNAME / experiment_ident
     save_path.mkdir(parents=True, exist_ok=True)
     save_path = save_path.joinpath(timestamp).with_suffix('.png')
@@ -64,8 +69,9 @@ def make_debug_script_save_path(experiment_ident, timestamp):
     """ Return the saving path for an experiment's debug script, creating the directories if needed.
     Args:
         experiment_ident: Experiment identifier.
-        timestamp: Experiment self.start_timestamp.
+        timestamp: Experiment self.start_time.
     """
+    timestamp = display_timestamp(timestamp)
     save_path = cooldown_save_path() / DEBUG_SCRIPTS_DIRNAME / experiment_ident
     save_path.mkdir(parents=True, exist_ok=True)
     save_path = save_path.joinpath(timestamp).with_suffix('.py')
@@ -135,4 +141,4 @@ def get_latest_run_path(experiment_ident):
     """ Get the path of the latest run of an experiment. """
     save_path = cooldown_save_path() / DATA_DIRNAME / experiment_ident
     files = list(save_path.glob('*.h5'))
-    return max(files, key=lambda x: datetime_from_timestamp(x.stem))
+    return max(files, key=lambda x: datetime.strptime(x.stem, TIMESTAMP_FORMAT))

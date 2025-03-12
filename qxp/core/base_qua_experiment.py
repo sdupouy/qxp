@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 import sys
 import threading
+
 import matplotlib.pyplot as plt
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
 
@@ -9,8 +11,8 @@ from qxp.utils.config import update_nested_dict
 from qxp.utils.database import current_cooldown
 from qxp.utils.instruments import initialize_instruments_from_config, turn_off_instruments_from_config
 from qxp.utils.save import get_current_timestamp, get_experiment_params, get_latest_run_path, \
-    save_dict_to_hdf5, load_dict_from_hdf5, datetime_from_timestamp, make_figure_save_path, \
-    make_debug_script_save_path, make_data_save_path
+    save_dict_to_hdf5, load_dict_from_hdf5, make_figure_save_path, \
+    make_debug_script_save_path, make_data_save_path, display_timestamp
 from qxp.measurement_db.core.models import OpticalTable, ExperimentRun, Parameter, Measurement, Experiment
 
 plt.style.use(MPLSTYLE_PATH)
@@ -49,8 +51,8 @@ class BaseQuaExperiment(ABC):
               comment: A comment that will be stored with the experiment run.
         """
         self.comment = comment
-        self.start_timestamp = None  # set in self.run()
-        self.end_timestamp = None  # set in self.run()
+        self.start_time = None  # set in self.run() - ISO format and tz-aware
+        self.end_time = None  # set in self.run() - ISO format and tz-aware
         self.exp_config = {}  # set in self.configure()
         self.instruments_config = {}  # set in self.configure()
         self.qua_config = {}  # set in self.configure()
@@ -58,7 +60,6 @@ class BaseQuaExperiment(ABC):
         self.fit_params = {}  # set by self.fit(), typically popt
         self.measured_db_params = {}  # returned by self.fit(), to be saved to database
         self.save_path = None  # set in self.save()
-        self.experiment_run_id = None  # set in log_experiment_run_to_db()
 
     @abstractmethod
     def auto_set_exp_config(self):
@@ -110,7 +111,7 @@ class BaseQuaExperiment(ABC):
 
         # Save the QUA debug script
         debug_script = generate_qua_script(prog=prog, config=self.qua_config)
-        debug_script_path = make_debug_script_save_path(self.identifier, self.start_timestamp)
+        debug_script_path = make_debug_script_save_path(self.identifier, self.start_time)
         debug_script_path.write_text(debug_script)
 
         # Simulate or execute
@@ -131,7 +132,7 @@ class BaseQuaExperiment(ABC):
 
     def save(self):
         """ Save the experiment parameters and data in the HDF5 format. """
-        self.save_path = make_data_save_path(self.identifier, self.start_timestamp)
+        self.save_path = make_data_save_path(self.identifier, self.start_time)
         dict_to_save = get_experiment_params(self)
 
         # Save the code of the experiment module
@@ -145,17 +146,23 @@ class BaseQuaExperiment(ABC):
         print('[+] Saved experiment to', self.save_path)
 
     def load(self, path=None):
-        """ Load saved data. If path is None the latest run will be loaded. """
+        """ Load saved data.
+        Args:
+            path (optional): The path to the hdf5 file. If None, the latest run will be loaded.
+        Returns:
+            The experiment instance.
+        """
         if path is None:
             path = get_latest_run_path(self.identifier)
         data_dict = load_dict_from_hdf5(path)
         for key, value in data_dict.items():
             setattr(self, key, value)
+        return self
 
     def log_experiment_run_to_db(self):
         """ Log the experiment run in the measurement database. """
         experiment = Experiment.objects.get_or_create(
-            name=self.identifier,
+            identifier=self.identifier,
             defaults={
                 'display_name': self.display_name,
                 'description': (self.__doc__ or '').replace('\t', ''),
@@ -165,7 +172,7 @@ class BaseQuaExperiment(ABC):
         optical_table = OpticalTable.objects.latest('datetime')
         experiment_run = ExperimentRun(
             experiment=experiment,
-            datetime=datetime_from_timestamp(self.start_timestamp),
+            datetime=datetime.fromisoformat(self.start_time),
             cooldown=current_cooldown(),
             optical_table=optical_table,
             data_path=self.save_path,
@@ -173,12 +180,11 @@ class BaseQuaExperiment(ABC):
         )
         experiment_run.save()
         print("[+] Logged experiment run to database")
-        self.experiment_run_id = experiment_run.id
 
     def save_measured_params_to_db(self):
         """ Save the measured parameters to the database. """
         if self.measured_db_params:
-            experiment_run = ExperimentRun.objects.get(id=self.experiment_run_id)
+            experiment_run = ExperimentRun.objects.get(datetime=datetime.fromisoformat(self.start_time))
             for key, value in self.measured_db_params.items():
                 if isinstance(value, (tuple, list)) and len(value) == 2:
                     value, uncertainty = value  # unpack (value, uncertainty) tuples
@@ -206,7 +212,7 @@ class BaseQuaExperiment(ABC):
             do_update_db (bool): Whether to update the database.
         """
         print('[+] Running', self.identifier)
-        self.start_timestamp = get_current_timestamp()
+        self.start_time = get_current_timestamp()
         self.initialize_instruments()
         prog = self.get_qua_program()
         job = self.run_qua_program(prog, simulate)
@@ -230,14 +236,14 @@ class BaseQuaExperiment(ABC):
 
         result_handles.wait_for_all_values()
         self.data = self.get_data(result_handles)
-        self.end_timestamp = get_current_timestamp()
+        self.end_time = get_current_timestamp()
 
         if do_fit:
             self.measured_db_params = self.fit()
 
         if do_plot:
             fig = self.plot()
-            fig_path = make_figure_save_path(self.identifier, self.start_timestamp)
+            fig_path = make_figure_save_path(self.identifier, self.start_time)
             fig.savefig(fig_path)
             print("[+] Saved figure at", fig_path)
 
@@ -280,4 +286,4 @@ class BaseQuaExperiment(ABC):
         self.run(simulate=simulate, do_fit=do_fit, do_plot=do_plot, do_save=do_save, do_update_db=do_update_db)
 
     def __str__(self):
-        return f'{self.identifier}__{self.start_timestamp}'
+        return f'{self.identifier}__{display_timestamp(self.start_time)}'

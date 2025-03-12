@@ -2,6 +2,7 @@ from django.views.generic import TemplateView, ListView, DetailView, CreateView
 from django.shortcuts import get_object_or_404, redirect
 from django.http import JsonResponse
 from django.utils import timezone
+from django.urls import reverse_lazy
 
 from .models import Cooldown, ExperimentRun, Measurement, Parameter, Chip
 from .forms import CooldownForm
@@ -34,6 +35,7 @@ class CooldownDetailView(DetailView):
 class CooldownCreateView(CreateView):
     model = Cooldown
     form_class = CooldownForm
+    success_url = reverse_lazy('index')
 
 
 def warmup(request, pk):
@@ -60,6 +62,7 @@ class ChipDetailView(DetailView):
 class ChipCreateView(CreateView):
     model = Chip
     fields = '__all__'
+    success_url = reverse_lazy('index')
 
 
 class ExperimentRunListView(ListView):

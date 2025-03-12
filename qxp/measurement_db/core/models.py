@@ -55,8 +55,8 @@ class Experiment(models.Model):
 
 
 class ExperimentRun(models.Model):
+    datetime = models.DateTimeField(default=timezone.now, unique=True)
     experiment = models.ForeignKey(Experiment, on_delete=models.PROTECT)
-    datetime = models.DateTimeField(default=timezone.now)
     cooldown = models.ForeignKey(Cooldown, on_delete=models.PROTECT)
     optical_table = models.ForeignKey(OpticalTable, on_delete=models.PROTECT)
     data_path = models.CharField(max_length=255)
