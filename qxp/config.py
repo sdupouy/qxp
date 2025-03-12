@@ -10,9 +10,11 @@ import django
 from qxp.utils.config import get_project_dir, load_experiment_config_module
 
 
-# setup Django (should only run once)
+# required to run Django in a jupyter notebook [https://docs.djangoproject.com/en/5.1/topics/async/#async-safety]
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+# setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'qxp.measurement_db.settings')
-django.setup()
+django.setup()  # should only run once
 
 # Global configuration
 QXP_PROJECT_DIR = Path(get_project_dir())  # The qxp project directory

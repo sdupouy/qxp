@@ -1,5 +1,5 @@
-from qxp.measurement_db.core.models import Measurement, Cooldown
 from qxp.config import CURRENT_CHIP
+from qxp.measurement_db.core.models import Measurement, Cooldown
 
 
 def current_cooldown():
