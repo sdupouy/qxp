@@ -2,6 +2,16 @@ import os
 import shutil
 import importlib.resources as pkg_resources
 import qxp
+import django
+from django.core.management import call_command
+
+
+def migrate_project(qxp_project_dir):
+    """Apply Django migrations."""
+    os.environ['QXP_PROJECT_DIR'] = qxp_project_dir
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "qxp.measurement_db.settings")
+    django.setup()  # Initialize Django before running management commands
+    call_command("migrate")  # Run migrations
 
 
 def create_project():
@@ -20,3 +30,4 @@ def create_project():
     template_dir = str(pkg_resources.files(qxp) / "project_template")
     shutil.copytree(template_dir, target_dir)
     print(f"Project '{project_name}' created successfully at {target_dir}.")
+    migrate_project(target_dir)
