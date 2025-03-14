@@ -9,9 +9,9 @@
         <tr>
           <th scope="col"></th>
           <th scope="col">Date</th>
-          <th scope="col">Identifier</th>
           <th scope="col">Name</th>
           <th scope="col">Chip</th>
+          <th scope="col">Cooldown</th>
         </tr>
       </thead>
       <tbody>
@@ -25,9 +25,9 @@
             {% endif %}
           </th>
           <td>{{ exp_run.datetime }}</td>
-          <td>{{ exp_run.experiment.identifier }}</td>
-          <td>{{ exp_run.experiment.display_name }}</td>
-          <td>{{ exp_run.cooldown.chip }}</td>
+          <td><a href="{% url 'experiment-detail' exp_run.experiment.identifier %}">{{ exp_run.experiment.display_name }}</a></td>
+          <td><a href="{% url 'chip-detail' exp_run.cooldown.chip.identifier %}">{{ exp_run.cooldown.chip }}</a></td>
+          <td>{{ exp_run.cooldown.number }}</td>
         </tr>
       {% endfor %}
       </tbody>

@@ -1,7 +1,77 @@
 {% extends 'core/base.html' %}
+{% load crispy_forms_tags %}
 
 {% block content %}
   <h1>Chip {{ object }}</h1>
-  
-  <p>TODO</p>
+
+  <div class="row">
+    <div class="col-md-8 col-sm-6">
+      <dl>
+        <dt>Identifier</dt>
+        <dd>{{ object.identifier }}</dd>
+
+        <dt>Fabricated on</dt>
+        <dd>{{ object.fab_date }}</dd>
+
+        {% if object.comment %}
+          <dt>Comment</dt>
+          <dd>
+            {{ object.comment }}
+          </dd>
+        {% endif %}
+      </dl>
+
+      {% if not object.comment %}
+        <form method="post" class="mb-3 bold-labels">
+          {% csrf_token %}
+          {{ form|crispy }}
+          <button type="submit" class="btn btn-primary">Add a comment</button>
+        </form>
+      {% endif %}
+    </div>
+
+    <div class="col-md-4 col-sm-6" data-bs-toggle="modal" data-bs-target="#chipPictureModal">
+      <div class="image-hover img-container rounded">
+        <img class="img-fluid rounded" src="{{ chip.picture.url }}" alt="chip picture">
+      </div>
+    </div>
+
+    <div class="modal fade" id="chipPictureModal" tabindex="-1" aria-labelledby="chipPictureModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="chipPictureModalLabel">Chip {{ chip.identifier }}</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <img src="{{ chip.picture.url }}" class="img-fluid" alt="chip picture">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Latest measured parameters</h2>
+  {% if latest_measurements %}
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">Parameter</th>
+          <th scope="col">Value</th>
+          <th scope="col">Date</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for measurement in latest_measurements %}
+        <tr class="clickable" onclick="window.location='{% url 'experiment-run-detail' measurement.experiment_run.id %}'">
+          <td><a href="{% url 'parameter-detail' measurement.parameter.identifier %}">{{ measurement.parameter.display_name_or_identifier }}</a></td>
+          <td>{{ measurement.value_uncertainty_unit }}</td>
+          <td>{{ measurement.experiment_run.datetime }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No parameter measured yet on this chip.</p>
+  {% endif %}
 {% endblock %}

@@ -14,8 +14,8 @@
     <dt>Experiment</dt>
     <dd>{{ object.experiment.display_name }}</dd>
 
-    <dt>Chip</dt>
-    <dd>{{ object.cooldown.chip.name }}</dd>
+    <dt>Chip # cooldown</dt>
+    <dd>{{ object.cooldown.chip.identifier }} # {{ object.cooldown.number }}</dd>
 
     <dt>Data at</dt>
     <dd>{{ object.data_path }}</dd>
@@ -38,18 +38,21 @@
 
   <h2>Setup</h2>
   <div class="row my-3">
-    <div class="col-md-4 mb-3">
+    <div class="col-lg-4 mb-3">
       <div class="card">
         <div class="card-header">
           <h4 class="mb-0">Chip</h4>
         </div>
         <div class="row g-0">
-          <div class="col-md-4 card-img-container image-hover rounded-bottom-left" data-bs-toggle="modal" data-bs-target="#chipPictureModal">
-            <img src="{{ object.cooldown.chip.picture.url }}" class="img-fluid" alt="chip picture">
+          <div class="col-sm-4 img-container image-hover rounded-bottom-left" data-bs-toggle="modal" data-bs-target="#chipPictureModal">
+            <img src="{{ object.cooldown.chip.picture.url }}" alt="chip picture">
           </div>
-          <div class="col-md-8">
+          <div class="col-sm-8">
             <div class="card-body">
-              <h5 class="card-title">{{ object.cooldown.chip.name }}</h5>
+              <h5 class="card-title">{{ object.cooldown.chip.identifier }}</h5>
+              <div class="card-text mb-2">
+                <small class="text-body-secondary"><i class="bi bi-tools me-2"></i>Fabricated on {{ chip.fab_date }}</small>
+              </div>
               <p class="card-text">{{ object.cooldown.chip.comment }}</p>
             </div>
           </div>
@@ -57,41 +60,41 @@
       </div>
     </div>
 
-    <div class="col-md-4 mb-3">
+    <div class="col-lg-4 mb-3">
       <div class="card">
         <div class="card-header">
           <h4 class="mb-0 me-4">Cooldown</h4>
         </div>
         <div class="row g-0">
-          <div class="col-md-4 card-img-container image-hover rounded-bottom-left" data-bs-toggle="modal" data-bs-target="#cooldownCablingModal">
-            <img src="{{ object.cooldown.cabling.url }}" class="img-fluid" alt="cooldown wiring">
+          <div class="col-sm-4 img-container image-hover rounded-bottom-left" data-bs-toggle="modal" data-bs-target="#cooldownCablingModal">
+            <img src="{{ object.cooldown.cabling.url }}" alt="cooldown wiring">
           </div>
-          <div class="col-md-8">
+          <div class="col-sm-8">
             <div class="card-body">
               <h5># {{ object.cooldown.number }}</h5>
-              <p class="card-text">{{ object.cooldown.comment }}</p>
-              <p class="card-text">
+              <div class="card-text mb-2">
                 <small class="text-body-secondary"><i class="bi bi-snow me-2"></i>{{ object.cooldown.datetime }}</small>
                 {% if object.cooldown.warmup_datetime %}
                   <br><small class="text-body-secondary"><i class="bi bi-fire me-2"></i>{{ object.cooldown.warmup_datetime }}</small>
                 {% endif %}
-              </p>
+              </div>
+              <p class="card-text">{{ object.cooldown.comment }}</p>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-4 mb-3">
+    <div class="col-lg-4 mb-3">
       <div class="card">
         <div class="card-header">
           <h4 class="mb-0">Optical table</h4>
         </div>
         <div class="row g-0">
-          <div class="col-md-4 card-img-container image-hover rounded-bottom-left" data-bs-toggle="modal" data-bs-target="#opticalTableModal">
-            <img src="{{ object.optical_table.cabling.url }}" class="img-fluid" alt="optical table">
+          <div class="col-sm-4 img-container image-hover rounded-bottom-left" data-bs-toggle="modal" data-bs-target="#opticalTableModal">
+            <img src="{{ object.optical_table.cabling.url }}" alt="optical table">
           </div>
-          <div class="col-md-8">
+          <div class="col-sm-8">
             <div class="card-body">
               <h5>Rack {{ object.optical_table.rack_name }}</h5>
               <p class="card-text">{{ object.optical_table.comment }}</p>
@@ -106,7 +109,7 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h1 class="modal-title fs-5" id="chipPictureModalLabel">Chip {{ object.cooldown.chip.name }}</h1>
+          <h1 class="modal-title fs-5" id="chipPictureModalLabel">Chip {{ object.cooldown.chip.identifier }}</h1>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
@@ -149,7 +152,6 @@
     <table class="table table-hover">
       <thead>
         <tr>
-          <th scope="col">Date</th>
           <th scope="col">Parameter</th>
           <th scope="col">Value</th>
         </tr>
@@ -157,15 +159,8 @@
       <tbody>
       {% for measurement in object.measurement_set.all %}
         <tr>
-          <td>{{ measurement.experiment_run.datetime }}</td>
           <td><a href="{% url 'parameter-detail' measurement.parameter.identifier %}">{{ measurement.parameter.display_name_or_identifier }}</a></td>
-          <td>
-            {{ measurement.value }}
-            {% if measurement.uncertainty %}
-              &plusmn; {{ measurement.uncertainty }}
-            {% endif %}
-            {{ measurement.parameter.unit }}
-          </td>
+          <td>{{ measurement.value_uncertainty_unit }}</td>
         </tr>
       {% endfor %}
       </tbody>

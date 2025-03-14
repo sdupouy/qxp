@@ -7,26 +7,31 @@
     margin-right: 10px;
 }
 
-#nav-buttons a {
+#nav-buttons > a, #nav-buttons > button {
     color: white;
     border-color: white;
 }
 
-#nav-buttons a:hover {
+#nav-buttons > a:hover, #nav-buttons > button:hover {
     background-color: white;
     color: #ea9e00;
 }
 
-.rounded-bottom-left::after, .rounded-bottom-left img {
-    border-bottom-left-radius: var(--bs-border-radius) !important;
+/* This class is used for images in a card, that are not displayed on the left below the sm breakpoint. */
+@media (min-width: 576px) {
+    .rounded-bottom-left::after, .rounded-bottom-left img {
+        border-bottom-left-radius: var(--bs-border-radius) !important;
+    }
 }
 
-.card-img-container {
+.img-container {
     max-height: 300px;
     overflow: hidden;
 }
 
-.card-img-container img {
+.img-container img {
+    height: 100%;
+    width: 100%;
     object-fit: cover;
 }
 
@@ -59,12 +64,16 @@
     opacity: 1;
 }
 
-table a {
+a {
     text-decoration: none;
 }
 
-table a:hover {
+a:hover {
     text-decoration: underline;
+}
+
+a.btn:hover, a.navbar-brand:hover {
+    text-decoration: none;
 }
 
 .clickable {
@@ -73,4 +82,13 @@ table a:hover {
 
 .bold-labels label {
     font-weight: bold;
+}
+
+.clickable-card {
+    transition: box-shadow 0.1s ease;
+}
+
+.clickable-card:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);  /* Larger shadow */
+    cursor: pointer;  /* Indicates it is clickable */
 }

@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-3#jo=%$n!6ik@d4!di1zkx!vz91d%%i^mt&3*p#@x^3zpdgc*-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -44,7 +44,6 @@ INSTALLED_APPS = [
 
     'crispy_forms',
     'crispy_bootstrap5',
-    'django_select2',
     'qxp.measurement_db.core',  # core app for storing calibration values
 ]
 

@@ -1,7 +1,10 @@
 {% extends 'core/base.html' %}
 
 {% block content %}
-  <h1>Cooldown {{ object }}</h1>
+  <h1>Cooldown {{ object.number }} of chip {{ object.chip.identifier }}</h1>
   
-  <p>TODO</p>
+  {{ object.datetime }}
+  {{ object.warmup_datetime }}
+  {{ object.cabling.url }}
+  {{ object.comment }}
 {% endblock %}

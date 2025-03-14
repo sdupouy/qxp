@@ -14,8 +14,8 @@
       </thead>
       <tbody>
       {% for experiment in object_list %}
-        <tr>
-          <th scope="row"><a href="{% url 'experiment-detail' experiment.identifier %}">{{ experiment.display_name }}</a></th>
+        <tr class="clickable" onclick="window.location='{% url 'experiment-detail' experiment.identifier %}'">
+          <th scope="row">{{ experiment.display_name }}</th>
           <td>{{ experiment.identifier }}</td>
           <td>{{ experiment.module_name }}</td>
         </tr>

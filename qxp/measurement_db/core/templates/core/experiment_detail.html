@@ -2,12 +2,16 @@
 
 {% block content %}
   <h1>{{ object.display_name }}</h1>
-
-  <ul>
-    <li><strong>Identifier:</strong> {{ object.identifier }}</li>
-    <li><strong>Module name:</strong> {{ object.module_name }}</li>
-  </ul>
-
+  
+  <dl>
+    <dt>Identifier</dt>
+    <dd>{{ object.identifier }}</dd>
+  
+    <dt>Module name</dt>
+    <dd>{{ object.module_name|default:"-" }}</dd>
+  </dl>
+  
+  <h2>Description</h2>
   {% if object.description %}
     <p>{{ object.description }}</p>
   {% else %}
@@ -27,7 +31,7 @@
       </thead>
       <tbody>
       {% for exp_run in object.experimentrun_set.all %}
-        <tr>
+        <tr class="clickable" onclick="window.location='{% url 'experiment-run-detail' exp_run.id %}'">
           <td>
             {% if exp_run.starred %}
               <i class="bi bi-star-fill"></i>
@@ -36,7 +40,7 @@
             {% endif %}
           </td>
           <td>{{ exp_run.datetime }}</td>
-          <td>{{ exp_run.cooldown.chip.name }}</td>
+          <td><a href="{% url 'chip-detail' exp_run.cooldown.chip.identifier %}">{{ exp_run.cooldown.chip.identifier }}</a></td>
           <td>{{ exp_run.cooldown.number }}</td>
         </tr>
       {% endfor %}

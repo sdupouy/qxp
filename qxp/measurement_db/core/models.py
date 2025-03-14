@@ -1,18 +1,24 @@
+from datetime import date
+
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
 
 class Chip(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    identifier = models.SlugField(max_length=255, unique=True)
+    fab_date = models.DateField(default=date.today)
     picture = models.ImageField(upload_to='chip_pictures/', null=True, blank=True)
     comment = models.TextField(blank=True)
 
     def get_absolute_url(self):
-        return reverse('chip-detail', kwargs={'pk': self.pk})
+        return reverse('chip-detail', kwargs={'identifier': self.identifier})
 
     def __str__(self):
-        return self.name
+        return self.identifier
+
+    class Meta:
+        ordering = ['-fab_date', 'identifier']
 
 
 class OpticalTable(models.Model):
@@ -44,7 +50,7 @@ class Cooldown(models.Model):
         return reverse('cooldown-detail', kwargs={'pk': self.pk})
 
     def __str__(self):
-        return f'{self.chip.name} # {self.number} ({str(self.datetime)})'
+        return f'{self.chip.identifier} # {self.number} ({str(self.datetime)})'
 
     class Meta:
         unique_together = [['number', 'chip']]
@@ -52,10 +58,10 @@ class Cooldown(models.Model):
 
 
 class Experiment(models.Model):
-    identifier = models.CharField(max_length=255, unique=True)
+    identifier = models.SlugField(max_length=255, unique=True)
     display_name = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
     module_name = models.CharField(max_length=255, blank=True)
+    description = models.TextField(blank=True)
 
     def get_absolute_url(self):
         return reverse('experiment-detail', kwargs={'identifier': self.identifier})
@@ -64,7 +70,7 @@ class Experiment(models.Model):
         return self.identifier
 
     class Meta:
-        ordering = ['display_name']
+        ordering = ['identifier']
 
 
 class ExperimentRun(models.Model):
@@ -80,17 +86,17 @@ class ExperimentRun(models.Model):
         return reverse('experiment-run-detail', kwargs={'pk': self.pk})
 
     def __str__(self):
-        return f'{self.experiment.identifier} of {self.cooldown.chip.name} ({str(self.datetime)})'
+        return f'{self.experiment.identifier} of {self.cooldown.chip.identifier} ({str(self.datetime)})'
 
     class Meta:
         ordering = ['-datetime']
 
 
 class Parameter(models.Model):
-    identifier = models.CharField(max_length=255)
+    identifier = models.SlugField(max_length=255, unique=True)
     display_name = models.CharField(max_length=255, blank=True)
     unit = models.CharField(max_length=255, blank=True)
-    latex_notation = models.CharField(max_length=255, null=True, blank=True)
+    latex_notation = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
 
     @property
@@ -103,16 +109,31 @@ class Parameter(models.Model):
     def __str__(self):
         return self.identifier
 
+    class Meta:
+        ordering = ['identifier']
+
 
 class Measurement(models.Model):
     parameter = models.ForeignKey(Parameter, on_delete=models.PROTECT)
     value = models.FloatField()
     uncertainty = models.FloatField(null=True, blank=True)
     experiment_run = models.ForeignKey(ExperimentRun, on_delete=models.PROTECT)
-    comment = models.TextField(blank=True)
+
+    @property
+    def value_uncertainty_unit(self):
+        stripped_value = f'{self.value:.3f}'.rstrip('0').rstrip('.')
+        unit = ''
+        if self.parameter.unit:
+            unit = f' {self.parameter.unit}'
+        if self.uncertainty:
+            stripped_uncertainty = f'{self.uncertainty:.3f}'.rstrip('0').rstrip('.')
+            return f'{stripped_value} ± {stripped_uncertainty}{unit}'
+        else:
+            return f'{stripped_value}{unit}'
 
     def __str__(self):
-        return f"{self.parameter.identifier} @ {self.experiment_run.datetime}"
+        return f"{self.parameter.identifier} ({self.experiment_run.datetime})"
 
     class Meta:
+        unique_together = [['parameter', 'experiment_run']]
         ordering = ['experiment_run']

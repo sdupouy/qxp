@@ -3,5 +3,46 @@
 {% block content %}
   <h1>{{ object.display_name_or_identifier }}</h1>
   
-
+  <dl>
+    <dt>Identifier</dt>
+    <dd>{{ object.identifier }}</dd>
+  
+    <dt>Name</dt>
+    <dd>{{ object.display_name }}</dd>
+  
+    <dt>Unit</dt>
+    <dd>{{ object.unit|default:"-" }}</dd>
+    
+    <dt>Latex notation</dt>
+    <dd>{{ object.latex_notation|default:"-" }}</dd>
+  
+    <dt>Description</dt>
+    <dd>{{ object.description|default:"-" }}</dd>
+  </dl>
+  
+  <h2>Latest measurements</h2>
+  {% if not object.measurement_set.empty %}
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">Date</th>
+          <th scope="col">Value</th>
+          <th scope="col">Chip</th>
+          <th scope="col">Cooldown</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for measurement in object.measurement_set.all %}
+        <tr class="clickable" onclick="window.location='{% url 'experiment-run-detail' measurement.experiment_run.id %}'">
+          <td>{{ measurement.experiment_run.datetime }}</td>
+          <td>{{ measurement.value_uncertainty_unit }}</td>
+          <td><a href="{% url 'chip-detail' measurement.experiment_run.cooldown.chip.identifier %}">{{ measurement.experiment_run.cooldown.chip }}</a></td>
+          <td>{{ measurement.experiment_run.cooldown.number }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>This parameter hasn't been measured yet.</p>
+  {% endif %}
 {% endblock %}

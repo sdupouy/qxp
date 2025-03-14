@@ -8,18 +8,20 @@
       <thead>
         <tr>
           <th scope="col">Date</th>
-          <th scope="col">Identifier</th>
           <th scope="col">Name</th>
           <th scope="col">Value</th>
+          <th scope="col">Chip</th>
+          <th scope="col">Cooldown</th>
         </tr>
       </thead>
       <tbody>
       {% for measurement in object_list %}
-        <tr>
-          <th scope="row">{{ measurement.experiment_run.datetime }}</th>
-          <td>{{ measurement.parameter.identifier }}</td>
-          <td>{{ measurement.parameter.display_name }}</td>
-          <td>{{ measurement.value }}</td>
+        <tr class="clickable" onclick="window.location='{% url 'experiment-run-detail' measurement.experiment_run.id %}'">
+          <td>{{ measurement.experiment_run.datetime }}</td>
+          <td><a href="{% url 'parameter-detail' measurement.parameter.identifier %}">{{ measurement.parameter.display_name }}</a></td>
+          <td>{{ measurement.value_uncertainty_unit }}</td>
+          <td><a href="{% url 'chip-detail' measurement.experiment_run.cooldown.chip.identifier %}">{{ measurement.experiment_run.cooldown.chip }}</a></td>
+          <td>{{ measurement.experiment_run.cooldown.number }}</td>
         </tr>
       {% endfor %}
       </tbody>

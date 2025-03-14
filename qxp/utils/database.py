@@ -5,7 +5,7 @@ from qxp.measurement_db.core.models import Measurement, Cooldown
 def current_cooldown():
     """ Fetch the current cooldown from the database. """
     if CURRENT_CHIP:
-        return Cooldown.objects.filter(chip__name=CURRENT_CHIP).latest('datetime')
+        return Cooldown.objects.filter(chip__identifier=CURRENT_CHIP).latest('datetime')
     return Cooldown.objects.latest('datetime')
 
 

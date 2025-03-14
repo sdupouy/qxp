@@ -1,3 +1,5 @@
+from django.db.models import Window, F
+from django.db.models.functions import RowNumber
 from django.views.generic import TemplateView, ListView, DetailView, CreateView
 from django.shortcuts import get_object_or_404, redirect
 from django.http import JsonResponse
@@ -6,7 +8,7 @@ from django.urls import reverse_lazy
 from django.views.generic.edit import ModelFormMixin
 
 from .models import Cooldown, ExperimentRun, Measurement, Parameter, Chip, OpticalTable, Experiment
-from .forms import CooldownForm
+
 
 class IndexView(TemplateView):
     template_name = "core/index.html"
@@ -37,7 +39,7 @@ class CooldownDetailView(DetailView):
 
 class CooldownCreateView(CreateView):
     model = Cooldown
-    form_class = CooldownForm
+    fields = '__all__'
     success_url = reverse_lazy('index')
 
 
@@ -58,8 +60,42 @@ class ChipListView(ListView):
     model = Chip
 
 
-class ChipDetailView(DetailView):
+class ChipDetailView(DetailView, ModelFormMixin):
     model = Chip
+    slug_field = 'identifier'
+    slug_url_kwarg = 'identifier'
+    fields = ['comment']
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # This query gets the latest measurement for each parameter measured on the chip
+        latest_measurements = Measurement.objects.filter(
+            experiment_run__cooldown__chip=self.get_object(),
+        ).annotate(
+            row_number=Window(
+                expression=RowNumber(),
+                partition_by=[F('parameter')],
+                order_by=F('experiment_run__datetime').desc()
+            )
+        ).filter(
+            row_number=1
+        ).select_related('parameter', 'experiment_run').order_by('parameter')
+        context['latest_measurements'] = latest_measurements
+        return context
+
+    def get_form(self, *args, **kwargs):
+        form = super().get_form(*args, **kwargs)
+        form.fields['comment'].widget.attrs.update({'rows': 3, 'cols': 40})
+        return form
+
+    def post(self, request, *args, **kwargs):
+        # Get the object being displayed
+        self.object = self.get_object()
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
 
 
 class ChipCreateView(CreateView):

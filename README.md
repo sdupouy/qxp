@@ -37,12 +37,15 @@ exp.configure_and_run()
 
 ## TODO list
 - fill up templates for the measurement database
-  - parameter_detail
   - cooldown_list
   - cooldown_detail
-  - chip_list
-  - chip_detail
-- improve the admin panel
+- use katex to render parameter latex in the web panel
+- handle missing optional fields on models (e.g. pictures)
+- make all scripts (e.g. bootstrap) local so that the panel works well offline
+- make exp runs markable by a star
+- button to edit the comments on-page
+- add filters on the measurements and exp_run list views
+- matplotlib plots of the parameter's evolution
 - implement other experiments
     - readout duration optimization
     - readout weights optimization
