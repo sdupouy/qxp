@@ -210,8 +210,8 @@
     </div>
   </div>
   
-  <script src="{% static 'core/js/get_cookie.js' %}"></script>
   {% if cooldown.is_cold %}
+    <script src="{% static 'core/js/get_cookie.js' %}"></script>
     <script src="{% static 'core/js/warmup_button.js' %}"></script>
   {% endif %}
 {% endblock %}

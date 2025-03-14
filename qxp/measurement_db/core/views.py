@@ -29,12 +29,40 @@ class IndexView(TemplateView):
         return context
 
 
-class CooldownListView(ListView):
+class CooldownDetailView(DetailView, ModelFormMixin):
     model = Cooldown
+    fields = ['comment']
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # This query gets the latest measurement for each parameter measured on the chip
+        latest_measurements = Measurement.objects.filter(
+            experiment_run__cooldown=self.get_object(),
+        ).annotate(
+            row_number=Window(
+                expression=RowNumber(),
+                partition_by=[F('parameter')],
+                order_by=F('experiment_run__datetime').desc()
+            )
+        ).filter(
+            row_number=1
+        ).select_related('parameter', 'experiment_run').order_by('parameter')
+        context['latest_measurements'] = latest_measurements
+        return context
 
-class CooldownDetailView(DetailView):
-    model = Cooldown
+    def get_form(self, *args, **kwargs):
+        form = super().get_form(*args, **kwargs)
+        form.fields['comment'].widget.attrs.update({'rows': 3, 'cols': 40})
+        return form
+
+    def post(self, request, *args, **kwargs):
+        # Get the object being displayed
+        self.object = self.get_object()
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
 
 
 class CooldownCreateView(CreateView):
@@ -141,6 +169,16 @@ class ExperimentRunDetailView(DetailView, ModelFormMixin):
             return self.form_valid(form)
         else:
             return self.form_invalid(form)
+
+
+def toggle_star_exp_run(request, pk):
+    """ View to toggle the starred field of an ExperimentRun. """
+    if request.method == "POST":
+        entry = get_object_or_404(ExperimentRun, id=pk)
+        entry.starred = not entry.starred
+        entry.save()
+        return JsonResponse({"success": True, "starred": entry.starred})
+    return redirect("index")
 
 
 class MeasurementListView(ListView):

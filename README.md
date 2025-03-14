@@ -36,14 +36,9 @@ exp.configure_and_run()
 - Open a web browser and go to http://127.0.0.1:8000 
 
 ## TODO list
-- fill up templates for the measurement database
-  - cooldown_list
-  - cooldown_detail
 - use katex to render parameter latex in the web panel
 - handle missing optional fields on models (e.g. pictures)
 - make all scripts (e.g. bootstrap) local so that the panel works well offline
-- make exp runs markable by a star
-- button to edit the comments on-page
 - add filters on the measurements and exp_run list views
 - matplotlib plots of the parameter's evolution
 - implement other experiments

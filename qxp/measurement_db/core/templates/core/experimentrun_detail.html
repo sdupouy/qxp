@@ -1,10 +1,14 @@
 {% extends 'core/base.html' %}
+{% load static %}
 {% load crispy_forms_tags %}
 
 {% block content %}
   <h1>Experiment run</h1>
+  
   {% if object.starred %}
-    <span class="badge text-bg-secondary mb-3">Starred<i class="bi bi-star-fill ms-2"></i></span>
+    <button id="starred-badge" type="button" class="btn btn-warning btn-sm mb-3" data-entry-id="{{ object.id }}">Starred<i class="bi bi-star-fill ms-2"></i></button>
+  {% else %}
+    <button id="starred-badge" type="button" class="btn btn-secondary btn-sm mb-3" data-entry-id="{{ object.id }}">Not starred<i class="bi bi-star ms-2"></i></button>
   {% endif %}
 
   <dl>
@@ -19,22 +23,22 @@
 
     <dt>Data at</dt>
     <dd>{{ object.data_path }}</dd>
-
-    {% if object.comment %}
-      <dt>Comment</dt>
-      <dd>
-        {{ object.comment }}
-      </dd>
-    {% endif %}
+  
+    <dt class="d-flex align-items-center">
+      Comment
+      {% if object.comment %}
+        <button id="edit-comment-btn" type="button" class="btn btn-primary ms-3"><i class="bi bi-pencil me-1"></i>Edit</button>
+      {% endif %}
+    </dt>
+    <dd>
+      <span id="comment-text">{{ object.comment }}</span>
+      <form method="post" id="comment-form" class="mt-2 mb-3 no-labels {% if object.comment %}d-none{% endif %}">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-primary">Add a comment</button>
+      </form>
+    </dd>
   </dl>
-
-  {% if not object.comment %}
-    <form method="post" class="mb-3 bold-labels">
-      {% csrf_token %}
-      {{ form|crispy }}
-      <button type="submit" class="btn btn-primary">Add a comment</button>
-    </form>
-  {% endif %}
 
   <h2>Setup</h2>
   <div class="row my-3">
@@ -168,5 +172,8 @@
   {% else %}
     <p>No measured parameter associated to this experiment run.</p>
   {% endif %}
-
+  
+  <script src="{% static 'core/js/get_cookie.js' %}"></script>
+  <script src="{% static 'core/js/toggle_star_exp_run.js' %}"></script>
+  <script src="{% static 'core/js/edit_comment_btn.js' %}"></script>
 {% endblock %}

@@ -80,8 +80,8 @@ a.btn:hover, a.navbar-brand:hover {
     cursor: pointer;
 }
 
-.bold-labels label {
-    font-weight: bold;
+.no-labels label {
+    display: none;
 }
 
 .clickable-card {
@@ -91,4 +91,10 @@ a.btn:hover, a.navbar-brand:hover {
 .clickable-card:hover {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);  /* Larger shadow */
     cursor: pointer;  /* Indicates it is clickable */
+}
+
+#edit-comment-btn {
+    --bs-btn-padding-y: .05rem;
+    --bs-btn-padding-x: .4rem;
+    --bs-btn-font-size: .7rem;
 }

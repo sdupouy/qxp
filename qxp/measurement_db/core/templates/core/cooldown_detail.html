@@ -1,10 +1,122 @@
 {% extends 'core/base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
 
 {% block content %}
   <h1>Cooldown {{ object.number }} of chip {{ object.chip.identifier }}</h1>
   
-  {{ object.datetime }}
-  {{ object.warmup_datetime }}
-  {{ object.cabling.url }}
-  {{ object.comment }}
+  <div class="row my-3">
+    <div class="col-md-4">
+      <dl>
+        <dt>Chip</dt>
+        <dd><a href="{% url 'chip-detail' object.chip.identifier %}">{{ object.chip.identifier }}</a></dd>
+      
+        <dt>Cooldown date</dt>
+        <dd>{{ object.datetime }}</dd>
+
+        <dt>Warm up date</dt>
+        <dd>
+          {% if object.warmup_datetime %}
+            {{ object.warmup_datetime }}
+          {% else %}
+            Fridge is cold.
+            <br><button id="warmup-btn" class="btn btn-outline-danger mt-1" data-entry-id="{{ object.id }}">Warm up</button>
+          {% endif %}
+        </dd>
+
+        <dt class="d-flex align-items-center">
+          Comment
+          {% if object.comment %}
+            <button id="edit-comment-btn" type="button" class="btn btn-primary ms-3"><i class="bi bi-pencil me-1"></i>Edit</button>
+          {% endif %}
+        </dt>
+        <dd>
+          <span id="comment-text">{{ object.comment }}</span>
+          <form method="post" id="comment-form" class="mt-2 mb-3 no-labels {% if object.comment %}d-none{% endif %}">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <button type="submit" class="btn btn-primary">Add a comment</button>
+          </form>
+        </dd>
+      </dl>
+    </div>
+  
+    <div class="col-md-4 col-sm-6" data-bs-toggle="modal" data-bs-target="#cooldownCablingModal">
+      <div class="card">
+        <div class="card-header">
+          Cabling
+        </div>
+        <div class="image-hover img-container">
+          <img class="img-fluid card-img-bottom" src="{{ object.cabling.url }}" alt="chip picture">
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="cooldownCablingModal" tabindex="-1" aria-labelledby="cooldownCablingModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="cooldownCablingModalLabel">Cabling</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <img src="{{ object.cabling.url }}" class="img-fluid" alt="chip picture">
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <div class="col-md-4 col-sm-6" data-bs-toggle="modal" data-bs-target="#chipPictureModal">
+      <div class="card">
+        <div class="card-header">
+          Chip
+        </div>
+        <div class="image-hover img-container">
+          <img class="img-fluid card-img-bottom" src="{{ object.chip.picture.url }}" alt="chip picture">
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="chipPictureModal" tabindex="-1" aria-labelledby="chipPictureModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="chipPictureModalLabel">Chip {{ object.chip.identifier }}</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <img src="{{ object.chip.picture.url }}" class="img-fluid" alt="chip picture">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Latest measured parameters</h2>
+  {% if latest_measurements %}
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">Parameter</th>
+          <th scope="col">Value</th>
+          <th scope="col">Date</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for measurement in latest_measurements %}
+        <tr class="clickable" onclick="window.location='{% url 'experiment-run-detail' measurement.experiment_run.id %}'">
+          <td><a href="{% url 'parameter-detail' measurement.parameter.identifier %}">{{ measurement.parameter.display_name_or_identifier }}</a></td>
+          <td>{{ measurement.value_uncertainty_unit }}</td>
+          <td>{{ measurement.experiment_run.datetime }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No parameter measured yet on this chip.</p>
+  {% endif %}
+  
+  <script src="{% static 'core/js/get_cookie.js' %}"></script>
+  <script src="{% static 'core/js/warmup_button.js' %}"></script>
+  <script src="{% static 'core/js/edit_comment_btn.js' %}"></script>
 {% endblock %}
