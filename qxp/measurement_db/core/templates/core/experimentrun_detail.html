@@ -16,10 +16,19 @@
     <dd>{{ object.datetime }}</dd>
 
     <dt>Experiment</dt>
-    <dd>{{ object.experiment.display_name }}</dd>
+    <dd>
+      <a href="{% url 'experiment-detail' object.experiment.identifier %}">
+        {{ object.experiment.display_name }}
+      </a>
+    </dd>
 
     <dt>Chip # cooldown</dt>
-    <dd>{{ object.cooldown.chip.identifier }} # {{ object.cooldown.number }}</dd>
+    <dd>
+      <a href="{% url 'chip-detail' object.cooldown.chip.identifier %}">
+        {{ object.cooldown.chip.identifier }}</a>
+      <a href="{% url 'cooldown-detail' object.cooldown.id %}">
+        # {{ object.cooldown.number }}</a>
+    </dd>
 
     <dt>Data at</dt>
     <dd>{{ object.data_path }}</dd>
@@ -53,7 +62,9 @@
           </div>
           <div class="col-sm-8">
             <div class="card-body">
-              <h5 class="card-title">{{ object.cooldown.chip.identifier }}</h5>
+              <h5 class="card-title">
+                <a href="{% url 'chip-detail' object.cooldown.chip.identifier %}">{{ object.cooldown.chip.identifier }}</a>
+              </h5>
               <div class="card-text mb-2">
                 <small class="text-body-secondary"><i class="bi bi-tools me-2"></i>Fabricated on {{ chip.fab_date }}</small>
               </div>
@@ -75,7 +86,9 @@
           </div>
           <div class="col-sm-8">
             <div class="card-body">
-              <h5># {{ object.cooldown.number }}</h5>
+              <h5 class="card-title">
+                <a href="{% url 'cooldown-detail' object.cooldown.id %}"># {{ object.cooldown.number }}</a>
+              </h5>
               <div class="card-text mb-2">
                 <small class="text-body-secondary"><i class="bi bi-snow me-2"></i>{{ object.cooldown.datetime }}</small>
                 {% if object.cooldown.warmup_datetime %}
@@ -100,7 +113,7 @@
           </div>
           <div class="col-sm-8">
             <div class="card-body">
-              <h5>Rack {{ object.optical_table.rack_name }}</h5>
+              <h5 class="card-title">Rack {{ object.optical_table.rack_name }}</h5>
               <p class="card-text">{{ object.optical_table.comment }}</p>
             </div>
           </div>

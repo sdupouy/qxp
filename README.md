@@ -33,7 +33,12 @@ exp.configure_and_run()
 
 ## To launch the web panel:
 - Run `qxp-start-webpanel` in the terminal from within the project directory
-- Open a web browser and go to http://127.0.0.1:8000 
+- Open a web browser and go to http://127.0.0.1:8000
+
+## Note
+The project directory is automatically determined as the closest parent
+of the current working directory containing a `qxp_config.py` file.
+This can be overridden by setting the `QXP_PROJECT_DIR` environment variable.
 
 ## TODO list
 - use katex to render parameter latex in the web panel
@@ -41,12 +46,3 @@ exp.configure_and_run()
 - make all scripts (e.g. bootstrap) local so that the panel works well offline
 - add filters on the measurements and exp_run list views
 - matplotlib plots of the parameter's evolution
-- implement other experiments
-    - readout duration optimization
-    - readout weights optimization
-    - ro resonator spectroscopy lo sweep
-    - transmon spectroscopy lo sweep
-    - Rabi chevron
-    - T1
-    - Ramsey
-    - T2 echo

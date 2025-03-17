@@ -55,7 +55,7 @@
               </div>
               <div class="col-sm-8">
                 <div class="card-body">
-                  <h5># {{ cooldown.number }}</h5>
+                  <h5 class="card-title"><a href="{% url 'cooldown-detail' cooldown.id %}"># {{ cooldown.number }}</a></h5>
                   <div class="card-text mb-2">
                     <small class="text-body-secondary"><i class="bi bi-snow me-2"></i>{{ cooldown.datetime }}</small>
                     {% if cooldown.warmup_datetime %}
@@ -89,7 +89,7 @@
               </div>
               <div class="col-sm-8">
                 <div class="card-body">
-                  <h5>Rack {{ optical_table.rack_name }}</h5>
+                  <h5 class="card-title">Rack {{ optical_table.rack_name }}</h5>
                   <p class="card-text">{{ optical_table.comment }}</p>
                 </div>
               </div>

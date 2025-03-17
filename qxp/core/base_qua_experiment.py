@@ -13,6 +13,7 @@ from qxp.utils.instruments import initialize_instruments_from_config, turn_off_i
 from qxp.utils.save import get_current_timestamp, get_experiment_params, get_latest_run_path, \
     save_dict_to_hdf5, load_dict_from_hdf5, make_figure_save_path, \
     make_debug_script_save_path, make_data_save_path, display_timestamp
+from qxp.utils.units import try_to_match_units
 from qxp.measurement_db.core.models import OpticalTable, ExperimentRun, Parameter, Measurement, Experiment
 
 plt.style.use(MPLSTYLE_PATH)
@@ -185,12 +186,28 @@ class BaseQuaExperiment(ABC):
         """ Save the measured parameters to the database. """
         if self.measured_db_params:
             experiment_run = ExperimentRun.objects.get(datetime=datetime.fromisoformat(self.start_time))
-            for key, value in self.measured_db_params.items():
-                if isinstance(value, (tuple, list)) and len(value) == 2:
-                    value, uncertainty = value  # unpack (value, uncertainty) tuples
-                else:
-                    uncertainty = None
-                parameter = Parameter.objects.get_or_create(identifier=key)[0]
+            for key, value_dict in self.measured_db_params.items():
+                value = value_dict['value']
+                uncertainty = value_dict.get('uncertainty')
+                unit = value_dict.get('unit')
+
+                # Extract or create the parameter in the database
+                parameter, _ = Parameter.objects.get_or_create(
+                    identifier=key,
+                    defaults={'unit': unit}
+                )
+
+                # Try to match units if they are not the same
+                unit_db = parameter.unit
+                if (unit_db or unit) and unit_db != unit:
+                    print(f"Attempting to match units {parameter} and {unit_db}")
+                    multiplier = try_to_match_units(unit, unit_db)
+                    if multiplier is not None:
+                        unit *= multiplier
+                    else:
+                        print(f"[!] Units could not be matched, {key} not saved to database")
+                        continue
+
                 measurement = Measurement(
                     parameter=parameter,
                     value=value,
@@ -198,7 +215,7 @@ class BaseQuaExperiment(ABC):
                     experiment_run=experiment_run,
                 )
                 measurement.save()
-            print("[+] Saved measured parameters to database")
+                print(f"[+] Saved measured parameter {key} to database")
         else:
             print("[!] No measured values to save to database. Is do_fit=True?")
 
