@@ -36,7 +36,7 @@ def get_experiment_params(experiment):
 
 
 def cooldown_save_path():
-    return Path(STORAGE_PATH) / current_chip().name / f'cooldown_{current_cooldown().number}'
+    return Path(STORAGE_PATH) / current_chip().identifier / f'cooldown_{current_cooldown().number}'
 
 
 def make_data_save_path(experiment_ident, timestamp):

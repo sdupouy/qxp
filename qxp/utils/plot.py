@@ -12,6 +12,7 @@ def apply_to_axes(axes: Union[Axes, List, np.ndarray], func):
     else:
         raise TypeError('Invalid type for axes.')
 
+
 def clean_axes(axes: Union[Axes, List, np.ndarray]):
     def clean(ax: Axes):
         for line in ax.lines:
@@ -19,12 +20,14 @@ def clean_axes(axes: Union[Axes, List, np.ndarray]):
 
     apply_to_axes(axes, clean)
 
+
 def clean_axes_2d(axes: Union[Axes, List, np.ndarray]):
     def clean(ax: Axes):
         for quad in ax.collections:
             quad.remove()
 
     apply_to_axes(axes, clean)
+
 
 def adjust_axes_limits(axes: Union[Axes, List, np.ndarray]):
     def adjust(ax: Axes):

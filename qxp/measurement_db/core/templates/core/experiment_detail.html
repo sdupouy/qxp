@@ -13,7 +13,7 @@
   
   <h2>Description</h2>
   {% if object.description %}
-    <p>{{ object.description }}</p>
+    <p>{{ object.description|linebreaksbr }}</p>
   {% else %}
     <p>No description available.</p>
   {% endif %}

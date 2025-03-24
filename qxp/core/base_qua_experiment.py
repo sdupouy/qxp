@@ -5,6 +5,7 @@ import threading
 
 import matplotlib.pyplot as plt
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
+from qualang_tools.plot import interrupt_on_close
 
 from qxp.config import EXP_CONFIG, get_qua_config, OPX_CONNECTION, INSTRUMENTS_CONFIG, MPLSTYLE_PATH
 from qxp.utils.config import update_nested_dict
@@ -92,9 +93,35 @@ class BaseQuaExperiment(ABC):
         pass
 
     @abstractmethod
-    def plot(self):
-        """ Plot the data and return a matplotlib figure. """
+    def initialize_plot(self):
+        """ Create a matplotlib figure. Return a dictionary of objects to update. """
         pass
+
+    @abstractmethod
+    def update_plot(self, updatables):
+        """ Update the plot. """
+        pass
+
+    def plot(self):
+        """ Initialize and update the plot with self.data. """
+        updatables = self.initialize_plot()
+        self.update_plot(updatables)
+
+    def live_plot(self, job):
+        """ Do the live plotting. """
+        print("[+] Starting live plotting.")
+        updatables = self.initialize_plot()
+        interrupt_on_close(plt.gcf(), job)  # Interrupt the job when the user closes the figure
+
+        # Wait for the first results
+        for v in job.result_handles.values():
+            v.wait_for_values(1)
+
+        # Live plotting loop
+        while job.result_handles.is_processing():
+            self.data = self.get_data(job.result_handles)
+            self.update_plot(updatables)
+            plt.pause(5)
 
     def initialize_instruments(self):
         initialize_instruments_from_config(self.instruments_config)
@@ -166,7 +193,7 @@ class BaseQuaExperiment(ABC):
             identifier=self.identifier,
             defaults={
                 'display_name': self.display_name,
-                'description': (self.__doc__ or '').replace('\t', ''),
+                'description': (self.__doc__ or '').replace('\t', '').strip('\r\n '),
                 'module_name': self.__class__.__module__,
             }
         )[0]
@@ -235,21 +262,18 @@ class BaseQuaExperiment(ABC):
         job = self.run_qua_program(prog, simulate)
         result_handles = job.result_handles
 
-        # do live plotting if the method is defined
-        live_plotting_thread = None
-        live_plotting = getattr(self, 'live_plotting', None)
-        if callable(live_plotting):
-            live_plotting_thread = threading.Thread(target=live_plotting, args=(job,), daemon=True)
-            print('[+] Starting live plotting thread')
-            live_plotting_thread.start()
-
         # manage job pauses (run outer loops) if the method is defined
+        job_management_thread = None
         manage_job_pauses = getattr(self, 'manage_job_pauses', None)
         if callable(manage_job_pauses):
-            manage_job_pauses(job)
+            job_management_thread = threading.Thread(target=manage_job_pauses, args=(job,), daemon=True)
+            print('[+] Starting job management thread')
+            job_management_thread.start()
 
-        if live_plotting_thread:
-            live_plotting_thread.join()  # wait for the thread to terminate (normally when the job finished processing)
+        self.live_plot(job)
+
+        if job_management_thread:
+            job_management_thread.join()  # wait for the thread to terminate (normally when the job finished processing)
 
         result_handles.wait_for_all_values()
         self.data = self.get_data(result_handles)
@@ -259,10 +283,11 @@ class BaseQuaExperiment(ABC):
             self.measured_db_params = self.fit()
 
         if do_plot:
-            fig = self.plot()
-            fig_path = make_figure_save_path(self.identifier, self.start_time)
-            fig.savefig(fig_path)
-            print("[+] Saved figure at", fig_path)
+            self.plot()
+            if do_save:
+                fig_path = make_figure_save_path(self.identifier, self.start_time)
+                plt.gcf().savefig(fig_path)
+                print("[+] Saved figure at", fig_path)
 
         if do_save:
             self.save()
