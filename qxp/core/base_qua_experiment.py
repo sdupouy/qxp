@@ -58,6 +58,7 @@ class BaseQuaExperiment(ABC):
         self.exp_config = {}  # set in self.configure()
         self.instruments_config = {}  # set in self.configure()
         self.qua_config = {}  # set in self.configure()
+        self.pre_run_data = {}  # set in self.run_qua_program if self.pre_run if defined
         self.data = {}  # returned by self.get_data()
         self.fit_params = {}  # set by self.fit(), typically popt
         self.measured_db_params = {}  # returned by self.fit(), to be saved to database
@@ -80,7 +81,10 @@ class BaseQuaExperiment(ABC):
 
     @abstractmethod
     def get_data(self, result_handles):
-        """ Return the dictionary containing the data. """
+        """
+        Return the dictionary containing the data.
+        Ensure that some data is available before calling.
+        """
         pass
 
     @abstractmethod
@@ -155,6 +159,12 @@ class BaseQuaExperiment(ABC):
             exit()
         else:
             qm = qmm.open_qm(self.qua_config)
+
+            # execute pre-run if defined in child class
+            pre_run = getattr(self, 'pre_run', None)
+            if callable(pre_run):
+                self.pre_run_data = pre_run(qm)
+
             job = qm.execute(prog)
             return job
 
@@ -258,6 +268,8 @@ class BaseQuaExperiment(ABC):
         print('[+] Running', self.identifier)
         self.start_time = get_current_timestamp()
         self.initialize_instruments()
+
+        # prepare the main job
         prog = self.get_qua_program()
         job = self.run_qua_program(prog, simulate)
         result_handles = job.result_handles

@@ -4,6 +4,7 @@ import pytz
 import h5py
 import json
 from pathlib import Path
+import numpy as np
 
 from qxp.config import TIMESTAMP_FORMAT, DATA_DIRNAME, FIGURES_DIRNAME, DEBUG_SCRIPTS_DIRNAME, STORAGE_PATH, TIME_ZONE
 from qxp.utils.database import current_chip, current_cooldown
@@ -89,13 +90,24 @@ def save_dict_to_hdf5(dict_to_save, save_path):
             # We store the qua_config as a string as it contains lists of dicts which aren't HDF5-friendly
             if key == "qua_config":
                 hdf_group.create_dataset(key, data=json.dumps(value))
-            elif isinstance(value, dict):
+
+            # Save non-empty dictionaries recursively
+            elif isinstance(value, dict) and value:
                 hdf_subgroup = hdf_group.create_group(str(key))
                 _recursively_save_dict(hdf_subgroup, value)
+
+            # Save strings/ints/floats/bools as attributes
             elif isinstance(value, (str, int, float, bool)):
-                hdf_group.attrs[key] = value  # Save strings as attributes
+                hdf_group.attrs[key] = value
+
+            # Save the data and mask of masked arrays separately
+            elif isinstance(value, np.ma.MaskedArray):
+                hdf_group.create_dataset(key, data=value.data)
+                hdf_group.create_dataset(f'_mask_{key}', data=value.mask)
+
+            # Save other data types as datasets
             elif value is not None:
-                hdf_group.create_dataset(key, data=value)  # Save other data types as datasets
+                hdf_group.create_dataset(key, data=value)
 
     with h5py.File(save_path, 'x') as hdf_file:  # Create the file and error if exists
         _recursively_save_dict(hdf_file, dict_to_save)
@@ -109,15 +121,26 @@ def load_dict_from_hdf5(path):
     def _recursively_load_as_dict(hdf_group):
         data_dict = {}
         for key, value in hdf_group.items():
+            # Skip special keys
+            if key.startswith('_'):
+                continue
+
             # The qua_config is stored as a string
             if key == "qua_config":
                 data_dict[key] = json.loads(value[()])
+
+            # If it's a group, recursively process it
             elif isinstance(value, h5py.Group):
-                # If it's a group, recursively process it
                 data_dict[key] = _recursively_load_as_dict(value)
+
+            # Convert dataset to numpy array or masked array
             elif isinstance(value, h5py.Dataset):
-                # Convert dataset to numpy array
-                data_dict[key] = value[()]  # This reads the entire dataset into memory
+                if f'_mask_{key}' in hdf_group:
+                    mask = hdf_group[f'_mask_{key}']
+                    data_dict[key] = np.ma.masked_array(value[()], mask=mask[()])
+                else:
+                    data_dict[key] = value[()]  # This reads the entire dataset into memory
+
         # Include attributes of the current group
         data_dict.update(hdf_group.attrs)
         return data_dict

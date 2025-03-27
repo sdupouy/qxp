@@ -46,3 +46,4 @@ This can be overridden by setting the `QXP_PROJECT_DIR` environment variable.
 - make all scripts (e.g. bootstrap) local so that the panel works well offline
 - add filters on the measurements and exp_run list views
 - matplotlib plots of the parameter's evolution
+- find a way to make QUA jobs thread safe
