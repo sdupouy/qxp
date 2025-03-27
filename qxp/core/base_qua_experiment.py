@@ -58,8 +58,10 @@ class BaseQuaExperiment(ABC):
         self.exp_config = {}  # set in self.configure()
         self.instruments_config = {}  # set in self.configure()
         self.qua_config = {}  # set in self.configure()
+        self.processed_config = {}  # returned by self.process_config - NOT SAVED
         self.pre_run_data = {}  # set in self.run_qua_program if self.pre_run if defined
         self.data = {}  # returned by self.get_data()
+        self.processed_data = {}  # returned by self.process_data() - NOT SAVED
         self.fit_params = {}  # set by self.fit(), typically popt
         self.measured_db_params = {}  # returned by self.fit(), to be saved to database
         self.save_path = None  # set in self.save()
@@ -74,6 +76,22 @@ class BaseQuaExperiment(ABC):
         """ Automatically set the instruments' initialization parameters. """
         pass
 
+    def process_config(self):
+        """
+        Process the configuration to extract values that make sense to plot.
+        Return a dictionary of processed configuration parameters that will be stored in self.processed_config,
+        but not saved on disk.
+        Should generally be called after self.configure.
+        """
+        return {}
+
+    def pre_run(self, qm):
+        """
+        Run a measurement or setup just before the main QUA program is executed.
+        Does nothing unless redefined in the child class.
+        """
+        return {}
+
     @abstractmethod
     def get_qua_program(self):
         """ Define the QUA program. """
@@ -82,10 +100,18 @@ class BaseQuaExperiment(ABC):
     @abstractmethod
     def get_data(self, result_handles):
         """
-        Return the dictionary containing the data.
+        Return the dictionary containing the unprocessed data, that will be saved to self.data.
         Ensure that some data is available before calling.
         """
         pass
+
+    def process_data(self):
+        """
+        Process self.data to extract values that make sense to plot.
+        Return a dictionary of processed data that will be stored in self.processed_data, but not saved on disk.
+        Should generally be called after self.get_data.
+        """
+        return {}
 
     @abstractmethod
     def fit(self):
@@ -124,6 +150,7 @@ class BaseQuaExperiment(ABC):
         # Live plotting loop
         while job.result_handles.is_processing():
             self.data = self.get_data(job.result_handles)
+            self.processed_data = self.process_data()
             self.update_plot(updatables)
             plt.pause(5)
 
@@ -159,12 +186,7 @@ class BaseQuaExperiment(ABC):
             exit()
         else:
             qm = qmm.open_qm(self.qua_config)
-
-            # execute pre-run if defined in child class
-            pre_run = getattr(self, 'pre_run', None)
-            if callable(pre_run):
-                self.pre_run_data = pre_run(qm)
-
+            self.pre_run_data = self.pre_run(qm)  # does nothing if not redefined in the child class
             job = qm.execute(prog)
             return job
 
@@ -183,19 +205,27 @@ class BaseQuaExperiment(ABC):
         save_dict_to_hdf5(dict_to_save, self.save_path)
         print('[+] Saved experiment to', self.save_path)
 
-    def load(self, path=None):
+    def load(self, path=None, process_config=True, process_data=True):
         """ Load saved data.
         Args:
             path (optional): The path to the hdf5 file. If None, the latest run will be loaded.
+            process_config (optional): Whether to process the configuration upon loading.
+            process_data (optional): Whether to process the data upon loading.
         Returns:
             The experiment instance.
         """
         if path is None:
             path = get_latest_run_path(self.identifier)
+
         data_dict = load_dict_from_hdf5(path)
         for key, value in data_dict.items():
             setattr(self, key, value)
-        return self
+
+        if process_config:
+            self.processed_config = self.process_config()
+        if process_data:
+            self.processed_data = self.process_data()
+        return self  # so we can do `exp = ExpClass.load()`
 
     def log_experiment_run_to_db(self):
         """ Log the experiment run in the measurement database. """
@@ -211,6 +241,7 @@ class BaseQuaExperiment(ABC):
         experiment_run = ExperimentRun(
             experiment=experiment,
             datetime=datetime.fromisoformat(self.start_time),
+            datetime_end=datetime.fromisoformat(self.end_time),
             cooldown=current_cooldown(),
             optical_table=optical_table,
             data_path=self.save_path,
@@ -290,6 +321,7 @@ class BaseQuaExperiment(ABC):
         result_handles.wait_for_all_values()
         self.data = self.get_data(result_handles)
         self.end_time = get_current_timestamp()
+        self.processed_data = self.process_data()
 
         if do_fit:
             self.measured_db_params = self.fit()
@@ -323,6 +355,7 @@ class BaseQuaExperiment(ABC):
         if force_instruments_config is not None:
             update_nested_dict(self.instruments_config, force_instruments_config)
         self.qua_config = get_qua_config(self.exp_config, self.instruments_config)
+        self.processed_config = self.process_config()  # does nothing unless redefined in child class
 
     def configure_and_run(self, force_exp_config=None, force_instruments_config=None,
                           simulate=False, do_fit=True, do_plot=True, do_save=True, do_update_db=False):

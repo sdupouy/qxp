@@ -12,11 +12,12 @@
           <th scope="col">Name</th>
           <th scope="col">Chip</th>
           <th scope="col">Cooldown</th>
+          <th scope="col">Duration</th>
         </tr>
       </thead>
       <tbody>
       {% for exp_run in object_list %}
-        <tr>
+        <tr onclick="window.location='{% url 'experiment-run-detail' exp_run.id %}'" class="clickable">
           <th scope="row">
             {% if exp_run.starred %}
               <i class="bi bi-star-fill"></i>
@@ -28,6 +29,7 @@
           <td><a href="{% url 'experiment-detail' exp_run.experiment.identifier %}">{{ exp_run.experiment.display_name }}</a></td>
           <td><a href="{% url 'chip-detail' exp_run.cooldown.chip.identifier %}">{{ exp_run.cooldown.chip }}</a></td>
           <td>{{ exp_run.cooldown.number }}</td>
+          <td>{{ exp_run.duration }}</td>
         </tr>
       {% endfor %}
       </tbody>

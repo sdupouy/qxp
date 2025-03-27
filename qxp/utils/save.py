@@ -29,7 +29,11 @@ def get_experiment_params(experiment):
         experiment: Experiment object.
     """
     def filter_key(k):
-        return not k.startswith('_')
+        if k.startswith('_'):
+            return False
+        if k == "processed_config" or k == "processed_data":
+            return False  # processed_config/data is not saved as it can be recovered from the saved config/data
+        return True
     experiment_params = {
         k: v for k, v in inspect.getmembers(experiment, lambda a: not callable(a)) if filter_key(k)
     }

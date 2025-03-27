@@ -12,7 +12,6 @@ from qxp.utils.plot import clean_axes, adjust_axes_limits
 
 class SkeletonExperiment(BaseQuaExperiment):
     """
-    EXPERIMENT NAME
     You should copy this file and use it as a basis for a QUA experiment class.
 
     Prerequisites:
@@ -32,11 +31,23 @@ class SkeletonExperiment(BaseQuaExperiment):
 
     def auto_set_exp_config(self):
         """ Automatically set the parameters of the experiment. """
-        ...  # use an autoconfig function in qxp.experiments.your_project.config.autoconfig
+        ...  # use an autoconfig function in qxp.experiments.utils.autoconfig
 
     def auto_set_instruments_config(self):
         """ Automatically set the instruments' initialization parameters. """
-        ...  # use an autoconfig function in qxp.experiments.your_project.config.autoconfig
+        ...  # use an autoconfig function in qxp.experiments.utils.autoconfig
+
+    def process_config(self):
+        """ (Optionnal) """
+        processed_config = {
+            '...': ...,
+        }
+        return processed_config
+
+    def pre_run(self, qm):
+        """ (Optionnal) """
+        pre_run_data = ...
+        return pre_run_data
 
     def get_qua_program(self):
         """ QUA program """
@@ -48,7 +59,20 @@ class SkeletonExperiment(BaseQuaExperiment):
 
         return prog
 
+    def manage_job_pauses(self, job):
+        """ (Optionnal) """
+        instrument = get_instrument_by_name(..., self.instruments_config)
+
+        # Example:
+        for power in ...:
+            instrument.set_power_dbm(power_dbm=power)
+            # Resume the QUA program (escape the 'pause' statement)
+            job.resume()
+            wait_until_job_is_paused(job)
+        job.halt()  # otherwise it remains in paused state
+
     def get_data(self, result_handles):
+        # Example:
         i_rawdata = result_handles.get("I").fetch_all()
         q_rawdata = result_handles.get("Q").fetch_all()
         iteration = result_handles.get("iteration").fetch_all()
@@ -61,26 +85,12 @@ class SkeletonExperiment(BaseQuaExperiment):
         }
         return data
 
-    def live_plotting(self, job):
-        fig, axs = plt.subplots()
-        interrupt_on_close(fig, job)  # Interrupt the job when closing the figure
-
-        # SET THE TITLE AND LABELS
-        ...
-        fig.canvas.manager.set_window_title(f'{self.identifier}: {self.start_timestamp}')
-
-        while job.result_handles.is_processing():
-            # Process the data
-            data = self.get_data(job.result_handles)
-            ...
-
-            # Plot the results
-            clean_axes(axs)
-            ...
-
-            adjust_axes_limits(axs)
-            plt.pause(0.1)
-            progress_counter(data['iteration'], self.n_avg)  # progress bar
+    def process_data(self):
+        """ (Optionnal) """
+        processed_data = {
+            '...': ...,
+        }
+        return processed_data
 
     def fit(self):
         # DO THE FIT
@@ -91,10 +101,17 @@ class SkeletonExperiment(BaseQuaExperiment):
         ...
 
         return {
+            # To be saved in database
             # KEY: VALUE,
         }
 
-    def plot(self):
+    def initialize_plot(self):
         fig, axs = plt.subplots()
         ...
-        return fig
+        return {
+            # Updatables to be updated in self.update_plot
+            # KEY: VALUE,
+        }
+
+    def update_plot(self, updatables):
+        updatables['lines1'].set_data(...)

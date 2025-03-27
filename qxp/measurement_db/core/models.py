@@ -75,12 +75,17 @@ class Experiment(models.Model):
 
 class ExperimentRun(models.Model):
     datetime = models.DateTimeField(default=timezone.now, unique=True)
+    datetime_end = models.DateTimeField(default=timezone.now)
     experiment = models.ForeignKey(Experiment, on_delete=models.PROTECT)
     cooldown = models.ForeignKey(Cooldown, on_delete=models.PROTECT)
     optical_table = models.ForeignKey(OpticalTable, on_delete=models.PROTECT)
     data_path = models.CharField(max_length=255)
     comment = models.TextField(blank=True)
     starred = models.BooleanField(default=False)
+
+    @property
+    def duration(self):
+        return self.datetime_end - self.datetime
 
     def get_absolute_url(self):
         return reverse('experiment-run-detail', kwargs={'pk': self.pk})

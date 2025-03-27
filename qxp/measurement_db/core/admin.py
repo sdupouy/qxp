@@ -43,7 +43,7 @@ class CooldownAdmin(admin.ModelAdmin):
 
 
 class ExperimentRunAdmin(admin.ModelAdmin):
-    list_display = ['datetime', 'experiment', 'cooldown__chip', 'cooldown__number', 'starred']
+    list_display = ['datetime', 'duration', 'experiment', 'cooldown__chip', 'cooldown__number', 'starred']
 
 
 class ParameterAdmin(admin.ModelAdmin):
