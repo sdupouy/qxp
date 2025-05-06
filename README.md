@@ -47,3 +47,4 @@ This can be overridden by setting the `QXP_PROJECT_DIR` environment variable.
 - add filters on the measurements and exp_run list views
 - matplotlib plots of the parameter's evolution
 - find a way to make QUA jobs thread safe
+- implement live saving

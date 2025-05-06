@@ -89,29 +89,37 @@ def save_dict_to_hdf5(dict_to_save, save_path):
         dict_to_save: Dictionary to save.
         save_path: Path to save HDF5 file.
     """
+    def _worth_saving(value):
+        if value is None:
+            return False
+        if hasattr(value, '__len__'):
+            return len(value) > 0
+        return True
+
     def _recursively_save_dict(hdf_group, dict_to_save):
         for key, value in dict_to_save.items():
-            # We store the qua_config as a string as it contains lists of dicts which aren't HDF5-friendly
-            if key == "qua_config":
-                hdf_group.create_dataset(key, data=json.dumps(value))
+            if _worth_saving(value):
+                # We store the qua_config as a string as it contains lists of dicts which aren't HDF5-friendly
+                if key == "qua_config":
+                    hdf_group.create_dataset(key, data=json.dumps(value))
 
-            # Save non-empty dictionaries recursively
-            elif isinstance(value, dict) and value:
-                hdf_subgroup = hdf_group.create_group(str(key))
-                _recursively_save_dict(hdf_subgroup, value)
+                # Save dictionaries recursively
+                elif isinstance(value, dict):
+                    hdf_subgroup = hdf_group.create_group(str(key))
+                    _recursively_save_dict(hdf_subgroup, value)
 
-            # Save strings/ints/floats/bools as attributes
-            elif isinstance(value, (str, int, float, bool)):
-                hdf_group.attrs[key] = value
+                # Save strings/ints/floats/bools as attributes
+                elif isinstance(value, (str, int, float, bool)):
+                    hdf_group.attrs[key] = value
 
-            # Save the data and mask of masked arrays separately
-            elif isinstance(value, np.ma.MaskedArray):
-                hdf_group.create_dataset(key, data=value.data)
-                hdf_group.create_dataset(f'_mask_{key}', data=value.mask)
+                # Save the data and mask of masked arrays separately
+                elif isinstance(value, np.ma.MaskedArray):
+                    hdf_group.create_dataset(key, data=value.data)
+                    hdf_group.create_dataset(f'_mask_{key}', data=value.mask)
 
-            # Save other data types as datasets
-            elif value is not None:
-                hdf_group.create_dataset(key, data=value)
+                # Save other data types (typically ndarrays) as datasets
+                else:
+                    hdf_group.create_dataset(key, data=value)
 
     with h5py.File(save_path, 'x') as hdf_file:  # Create the file and error if exists
         _recursively_save_dict(hdf_file, dict_to_save)

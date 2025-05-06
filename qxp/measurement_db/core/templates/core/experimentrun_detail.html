@@ -1,6 +1,7 @@
 {% extends 'core/base.html' %}
 {% load static %}
 {% load crispy_forms_tags %}
+{% load custom_filters %}
 
 {% block content %}
   <h1>Experiment run</h1>
@@ -31,7 +32,7 @@
     </dd>
 
     <dt>Duration</dt>
-    <dd>{{ object.duration }}</dd>
+    <dd>{{ object.duration|format_timedelta }}</dd>
 
     <dt>Data at</dt>
     <dd>{{ object.data_path }}</dd>
@@ -168,26 +169,28 @@
   </div>
 
   <h2>Measured parameters</h2>
-  {% if not object.measurement_set.empty %}
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th scope="col">Parameter</th>
-          <th scope="col">Value</th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for measurement in object.measurement_set.all %}
-        <tr>
-          <td><a href="{% url 'parameter-detail' measurement.parameter.identifier %}">{{ measurement.parameter.display_name_or_identifier }}</a></td>
-          <td>{{ measurement.value_uncertainty_unit }}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>No measured parameter associated to this experiment run.</p>
-  {% endif %}
+  {% with measurements=object.measurement_set.all %}
+    {% if measurements %}
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th scope="col">Parameter</th>
+            <th scope="col">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for measurement in measurements %}
+          <tr>
+            <td><a href="{% url 'parameter-detail' measurement.parameter.identifier %}">{{ measurement.parameter.display_name_or_identifier }}</a></td>
+            <td>{{ measurement.value_uncertainty_unit }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No measured parameter associated to this experiment run.</p>
+    {% endif %}
+  {% endwith %}
   
   <script src="{% static 'core/js/get_cookie.js' %}"></script>
   <script src="{% static 'core/js/toggle_star_exp_run.js' %}"></script>

@@ -1,4 +1,5 @@
 {% extends 'core/base.html' %}
+{% load custom_filters %}
 
 {% block content %}
   <h1>Experiment runs</h1>
@@ -29,7 +30,7 @@
           <td><a href="{% url 'experiment-detail' exp_run.experiment.identifier %}">{{ exp_run.experiment.display_name }}</a></td>
           <td><a href="{% url 'chip-detail' exp_run.cooldown.chip.identifier %}">{{ exp_run.cooldown.chip }}</a></td>
           <td>{{ exp_run.cooldown.number }}</td>
-          <td>{{ exp_run.duration }}</td>
+          <td>{{ exp_run.duration|format_timedelta }}</td>
         </tr>
       {% endfor %}
       </tbody>

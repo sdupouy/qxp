@@ -326,6 +326,7 @@ class BaseQuaExperiment(ABC):
         if do_fit:
             self.measured_db_params = self.fit()
 
+        plt.close()  # close the live plot if it still open
         if do_plot:
             self.plot()
             if do_save:
