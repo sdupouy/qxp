@@ -1,12 +1,14 @@
+import os
 from django.db.models import Window, F
 from django.db.models.functions import RowNumber
 from django.views.generic import TemplateView, ListView, DetailView, CreateView
 from django.shortcuts import get_object_or_404, redirect
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse, Http404
 from django.utils import timezone
 from django.urls import reverse_lazy
 from django.views.generic.edit import ModelFormMixin
 
+from qxp.utils.save import load_dict_from_hdf5, make_json_serializable, figure_path_from_data_path
 from .models import Cooldown, ExperimentRun, Measurement, Parameter, Chip, OpticalTable, Experiment
 
 
@@ -169,6 +171,29 @@ class ExperimentRunDetailView(DetailView, ModelFormMixin):
             return self.form_valid(form)
         else:
             return self.form_invalid(form)
+
+
+def exp_run_config(request, pk):
+    """ Fetch the configuration of an experiment run from the saved HDF5 file. """
+    entry = get_object_or_404(ExperimentRun, id=pk)
+    try:
+        config_dict = load_dict_from_hdf5(entry.data_path, keys=['exp_config', 'instruments_config', 'qua_config'])
+        config_dict = make_json_serializable(config_dict)  # convert numpy types to native python types
+        return JsonResponse({"success": True, "config": config_dict})
+    except FileNotFoundError as e:
+        return JsonResponse({"success": False, "message": str(e)})
+
+
+def exp_run_figure(request, pk):
+    """ Fetch the saved figure of an experiment run. """
+    entry = get_object_or_404(ExperimentRun, id=pk)
+    image_path = figure_path_from_data_path(entry.data_path)
+    print(image_path)
+
+    if not os.path.exists(image_path):
+        raise Http404("Image not found")
+
+    return FileResponse(open(image_path, 'rb'), content_type='image/png')
 
 
 def toggle_star_exp_run(request, pk):

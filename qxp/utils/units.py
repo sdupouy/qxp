@@ -33,10 +33,11 @@ def extract_unit_prefix(unit):
 
 
 def try_to_match_units(unit1, unit2):
-    """ Try to match unit1 to unit2. """
+    """ Try to match unit1 to unit2: 1 unit1 = return_value unit2. """
     multiplier1, unit_base1 = extract_unit_prefix(unit1)
     multiplier2, unit_base2 = extract_unit_prefix(unit2)
     if unit_base1 == unit_base2:
         return multiplier1 / multiplier2
     else:
+        print(f"[!] Units {unit1} and {unit2} could not be matched.")
         return None  # Units could not be matched

@@ -5,6 +5,7 @@ import h5py
 import json
 from pathlib import Path
 import numpy as np
+import re
 
 from qxp.config import TIMESTAMP_FORMAT, DATA_DIRNAME, FIGURES_DIRNAME, DEBUG_SCRIPTS_DIRNAME, STORAGE_PATH, TIME_ZONE
 from qxp.utils.database import current_chip, current_cooldown
@@ -125,16 +126,17 @@ def save_dict_to_hdf5(dict_to_save, save_path):
         _recursively_save_dict(hdf_file, dict_to_save)
 
 
-def load_dict_from_hdf5(path):
+def load_dict_from_hdf5(path, keys=None):
     """ Load dictionary from HDF5 file.
     Args:
         path: Path to HDF5 file.
+        keys: Keys to load. Load all keys if None (default).
     """
-    def _recursively_load_as_dict(hdf_group):
+    def _recursively_load_as_dict(hdf_group, keys=None):
         data_dict = {}
         for key, value in hdf_group.items():
-            # Skip special keys
-            if key.startswith('_'):
+            # Skip special keys; only keep keys asked for
+            if key.startswith('_') or keys is not None and key not in keys:
                 continue
 
             # The qua_config is stored as a string
@@ -154,11 +156,29 @@ def load_dict_from_hdf5(path):
                     data_dict[key] = value[()]  # This reads the entire dataset into memory
 
         # Include attributes of the current group
-        data_dict.update(hdf_group.attrs)
+        for key, value in hdf_group.attrs.items():
+            if keys is None or key in keys:
+                data_dict[key] = value
         return data_dict
 
     with h5py.File(path, 'r') as hdf_file:
-        return _recursively_load_as_dict(hdf_file)
+        return _recursively_load_as_dict(hdf_file, keys=keys)
+
+
+def make_json_serializable(obj):
+    """ Try to make a dictionary serializable to JSON by converting numpy types to native python types. """
+    if isinstance(obj, dict):
+        return {k: make_json_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [make_json_serializable(i) for i in obj]
+    elif isinstance(obj, (np.integer, np.floating)):
+        return obj.item()
+    elif isinstance(obj, np.bool_):  # Handle numpy bool
+        return bool(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    else:
+        return obj
 
 
 def load_experiment(path, experiment):
@@ -177,3 +197,12 @@ def get_latest_run_path(experiment_ident):
     save_path = cooldown_save_path() / DATA_DIRNAME / experiment_ident
     files = list(save_path.glob('*.h5'))
     return max(files, key=lambda x: datetime.strptime(x.stem, TIMESTAMP_FORMAT))
+
+
+def figure_path_from_data_path(data_path):
+    """ Find the figures path from the data path for a given experiment run. """
+    data_path = Path(data_path)
+    parts = list(data_path.parts)
+    parts[-3] = FIGURES_DIRNAME
+    new_path = Path(*parts).with_suffix('.png')
+    return new_path

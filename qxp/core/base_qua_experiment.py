@@ -183,7 +183,7 @@ class BaseQuaExperiment(ABC):
             job = qmm.simulate(self.qua_config, prog, simulation_config)
             job.get_simulated_samples().con1.plot()
             plt.show()
-            exit()
+            return None
         else:
             qm = qmm.open_qm(self.qua_config)
             self.pre_run_data = self.pre_run(qm)  # does nothing if not redefined in the child class
@@ -303,6 +303,8 @@ class BaseQuaExperiment(ABC):
         # prepare the main job
         prog = self.get_qua_program()
         job = self.run_qua_program(prog, simulate)
+        if job is None:  # happens if simulate=True
+            return
         result_handles = job.result_handles
 
         # manage job pauses (run outer loops) if the method is defined
@@ -347,8 +349,8 @@ class BaseQuaExperiment(ABC):
             force_exp_config (dict, optional): Dictionary to override values of the experiment config.
             force_instruments_config (dict, optional): Dictionary to override values of the instruments config.
         """
-        self.exp_config = EXP_CONFIG
-        self.instruments_config = INSTRUMENTS_CONFIG
+        self.exp_config = EXP_CONFIG.copy()  # important to copy so that the original config dict doesn't get modified
+        self.instruments_config = INSTRUMENTS_CONFIG.copy()  # important to copy so that the original config dict doesn't get modified
         self.auto_set_exp_config()
         if force_exp_config is not None:
             update_nested_dict(self.exp_config, force_exp_config)

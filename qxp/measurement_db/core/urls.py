@@ -2,7 +2,8 @@ from django.urls import path
 
 from .views import IndexView, CooldownDetailView, ExperimentRunListView, MeasurementListView, \
     ParameterDetailView, CooldownCreateView, ChipListView, ChipDetailView, ChipCreateView, warmup, \
-    OpticalTableCreateView, ExperimentListView, ExperimentDetailView, ExperimentRunDetailView, toggle_star_exp_run
+    OpticalTableCreateView, ExperimentListView, ExperimentDetailView, ExperimentRunDetailView, toggle_star_exp_run, \
+    exp_run_config, exp_run_figure
 
 urlpatterns = [
     path('', IndexView.as_view(), name="index"),
@@ -17,6 +18,8 @@ urlpatterns = [
     path('experiment/<slug:identifier>', ExperimentDetailView.as_view(), name="experiment-detail"),
     path('experiment_runs', ExperimentRunListView.as_view(), name="experiment-run-list"),
     path('experiment_run/<int:pk>', ExperimentRunDetailView.as_view(), name="experiment-run-detail"),
+    path('experiment_run/<int:pk>/config', exp_run_config, name="experiment-run-config"),
+    path('experiment_run/<int:pk>/figure.png', exp_run_figure, name="experiment-run-figure"),
     path('toggle_star_exp_run/<int:pk>', toggle_star_exp_run, name="toggle-star-exp-run"),
     path('measurements', MeasurementListView.as_view(), name="measurement-list"),
     path('parameter/<slug:identifier>', ParameterDetailView.as_view(), name="parameter-detail"),

@@ -48,10 +48,37 @@
       <form method="post" id="comment-form" class="mt-2 mb-3 no-labels {% if object.comment %}d-none{% endif %}">
         {% csrf_token %}
         {{ form|crispy }}
-        <button type="submit" class="btn btn-primary">Add a comment</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-pencil-fill me-2"></i>Add a comment</button>
       </form>
     </dd>
   </dl>
+
+  <h2>Measured parameters</h2>
+  {% with measurements=object.measurement_set.all %}
+    {% if measurements %}
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th scope="col">Parameter</th>
+            <th scope="col">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for measurement in measurements %}
+          <tr>
+            <td><a href="{% url 'parameter-detail' measurement.parameter.identifier %}">{{ measurement.parameter.display_name_or_identifier }}</a></td>
+            <td>{{ measurement.value_uncertainty_unit }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No measured parameter associated to this experiment run.</p>
+    {% endif %}
+  {% endwith %}
+
+  <h2>Figure</h2>
+  <img src="{% url 'experiment-run-figure' object.pk %}" alt="experiment run figure" class="img-fluid mb-3" style="max-height: 700px;">
 
   <h2>Setup</h2>
   <div class="row my-3">
@@ -168,31 +195,49 @@
     </div>
   </div>
 
-  <h2>Measured parameters</h2>
-  {% with measurements=object.measurement_set.all %}
-    {% if measurements %}
-      <table class="table table-hover">
-        <thead>
-          <tr>
-            <th scope="col">Parameter</th>
-            <th scope="col">Value</th>
-          </tr>
-        </thead>
-        <tbody>
-        {% for measurement in measurements %}
-          <tr>
-            <td><a href="{% url 'parameter-detail' measurement.parameter.identifier %}">{{ measurement.parameter.display_name_or_identifier }}</a></td>
-            <td>{{ measurement.value_uncertainty_unit }}</td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p>No measured parameter associated to this experiment run.</p>
-    {% endif %}
-  {% endwith %}
-  
+  <h2>Configuration</h2>
+  <button id="load-config" type="button" class="btn btn-primary mt-1"><i class="bi bi-gear-fill me-2"></i>Load config</button>
+  <pre id="config-json-renderer"></pre>
+
+  <!-- Include jQuery and JSON Viewer -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link href="{% static 'core/js/json-viewer/jquery.json-viewer.css' %}" rel="stylesheet">
+  <script src="{% static 'core/js/json-viewer/jquery.json-viewer.js' %}"></script>
+
+  <!-- Configuration loading -->
+  <script>
+    $(document).ready(function() {
+      $('#load-config').on('click', function() {
+        const configUrl = window.location.pathname + '/config';
+        $.ajax({
+          url: configUrl,
+          method: 'GET',
+          dataType: 'json',
+          success: function(response) {
+            if (response.success) {
+              // Render JSON using json-viewer
+              $('#config-json-renderer').jsonViewer(response.config, {
+                collapsed: true,
+                rootCollapsable: false,
+                withLinks: false
+              });
+              $('#load-config').hide();
+            } else {
+              // Show error message
+              $('#config-json-renderer').text(`Error: ${response.message || 'Unknown error'}`);
+            }
+          },
+          error: function(xhr, status, error) {
+            $('#config-json-renderer').text(`Error loading JSON: ${error}`);
+          }
+        });
+      });
+    });
+  </script>
+
   <script src="{% static 'core/js/get_cookie.js' %}"></script>
   <script src="{% static 'core/js/toggle_star_exp_run.js' %}"></script>
-  <script src="{% static 'core/js/edit_comment_btn.js' %}"></script>
+  {% if object.comment %}
+    <script src="{% static 'core/js/edit_comment_btn.js' %}"></script>
+  {% endif %}
 {% endblock %}
