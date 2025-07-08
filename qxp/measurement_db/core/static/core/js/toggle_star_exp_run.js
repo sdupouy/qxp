@@ -1,7 +1,7 @@
 document.getElementById("starred-badge").addEventListener("click", function() {
     let entryId = this.getAttribute("data-entry-id");
 
-    fetch(`/toggle_star_exp_run/${entryId}`, {
+    fetch(`/experiment_run/${entryId}/toggle_star`, {
         method: "POST",
         headers: {
             "X-CSRFToken": getCookie("csrftoken"), // CSRF token for security

@@ -1,0 +1,15 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+  <h1>Delete experiment run</h1>
+
+  <form method="post">{% csrf_token %}
+      <p>Are you sure you want to delete "{{ object }}"?</p>
+      {{ form }}
+      <div class="alert alert-danger" role="alert">
+        This will delete the <b>database record</b>, <b>stored data</b>, <b>debug scripts</b> and <b>figure</b>.
+      </div>
+      <input class="btn btn-danger me-2" type="submit" value="Confirm">
+      <a class="btn btn-secondary" href="{% url 'experiment-run-detail' object.id %}" role="button">Go back</a>
+  </form>
+{% endblock %}

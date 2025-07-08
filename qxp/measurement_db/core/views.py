@@ -1,14 +1,16 @@
 import os
 from django.db.models import Window, F
 from django.db.models.functions import RowNumber
-from django.views.generic import TemplateView, ListView, DetailView, CreateView
+from django.views.generic import TemplateView, ListView, DetailView, CreateView, DeleteView
 from django.shortcuts import get_object_or_404, redirect
-from django.http import JsonResponse, FileResponse, Http404
+from django.http import JsonResponse, FileResponse, Http404, HttpResponseForbidden
 from django.utils import timezone
 from django.urls import reverse_lazy
 from django.views.generic.edit import ModelFormMixin
 
-from qxp.utils.save import load_dict_from_hdf5, make_json_serializable, figure_path_from_data_path
+from qxp.utils.save import load_dict_from_hdf5, make_json_serializable, figure_path_from_data_path, \
+    debug_script_path_from_data_path, delete_file
+from qxp.config import ALLOW_DELETE_EXPRUN
 from .models import Cooldown, ExperimentRun, Measurement, Parameter, Chip, OpticalTable, Experiment
 
 
@@ -172,6 +174,11 @@ class ExperimentRunDetailView(DetailView, ModelFormMixin):
         else:
             return self.form_invalid(form)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["allow_delete"] = ALLOW_DELETE_EXPRUN
+        return context
+
 
 def exp_run_config(request, pk):
     """ Fetch the configuration of an experiment run from the saved HDF5 file. """
@@ -188,15 +195,12 @@ def exp_run_figure(request, pk):
     """ Fetch the saved figure of an experiment run. """
     entry = get_object_or_404(ExperimentRun, id=pk)
     image_path = figure_path_from_data_path(entry.data_path)
-    print(image_path)
-
     if not os.path.exists(image_path):
         raise Http404("Image not found")
-
     return FileResponse(open(image_path, 'rb'), content_type='image/png')
 
 
-def toggle_star_exp_run(request, pk):
+def exp_run_toggle_star(request, pk):
     """ View to toggle the starred field of an ExperimentRun. """
     if request.method == "POST":
         entry = get_object_or_404(ExperimentRun, id=pk)
@@ -204,6 +208,26 @@ def toggle_star_exp_run(request, pk):
         entry.save()
         return JsonResponse({"success": True, "starred": entry.starred})
     return redirect("index")
+
+
+class ExperimentRunDeleteView(DeleteView):
+    """ View to delete an experiment run. """
+    model = ExperimentRun
+    success_url = reverse_lazy("index")
+
+    def form_valid(self, form):
+        if not ALLOW_DELETE_EXPRUN:
+            return HttpResponseForbidden("This object cannot be deleted because ALLOW_DELETE_EXPRUN is set to False in the config.")
+
+        # Delete the data, debug script and figure
+        data_path = self.object.data_path
+        debug_script_path = debug_script_path_from_data_path(data_path)
+        figure_path = figure_path_from_data_path(data_path)
+        delete_file(data_path)
+        delete_file(debug_script_path)
+        delete_file(figure_path)
+
+        return super().form_valid(form)
 
 
 class MeasurementListView(ListView):

@@ -48,4 +48,3 @@ This can be overridden by setting the `QXP_PROJECT_DIR` environment variable.
 - matplotlib plots of the parameter's evolution
 - find a way to make QUA jobs thread safe
 - implement live saving
-- button in the web panel to delete a measurement

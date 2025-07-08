@@ -35,5 +35,6 @@ EXP_CONFIG = experiment_config.EXP_CONFIG
 OPX_CONNECTION = experiment_config.OPX_CONNECTION
 INSTRUMENTS_CONFIG = experiment_config.INSTRUMENTS_CONFIG
 get_qua_config = experiment_config.get_qua_config  # Function that returns the QUA config
+ALLOW_DELETE_EXPRUN = getattr(experiment_config, 'ALLOW_DELETE_EXPRUN', True)  # Whether to allow to delete experiment runs from the webpanel
 
 STORAGE_PATH = QXP_PROJECT_DIR / 'storage'

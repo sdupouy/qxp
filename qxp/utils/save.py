@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import numpy as np
 import re
+import os
 
 from qxp.config import TIMESTAMP_FORMAT, DATA_DIRNAME, FIGURES_DIRNAME, DEBUG_SCRIPTS_DIRNAME, STORAGE_PATH, TIME_ZONE
 from qxp.utils.database import current_chip, current_cooldown
@@ -206,3 +207,24 @@ def figure_path_from_data_path(data_path):
     parts[-3] = FIGURES_DIRNAME
     new_path = Path(*parts).with_suffix('.png')
     return new_path
+
+
+def debug_script_path_from_data_path(data_path):
+    """ Find the debug script path from the data path for a given experiment run. """
+    data_path = Path(data_path)
+    parts = list(data_path.parts)
+    parts[-3] = DEBUG_SCRIPTS_DIRNAME
+    new_path = Path(*parts).with_suffix('.py')
+    return new_path
+
+
+def delete_file(path):
+    """ Delete a file if it exists. """
+    if os.path.isfile(path):
+        try:
+            os.remove(path)
+            print(f"File '{path}' has been deleted.")
+        except Exception as e:
+            print(f"Error deleting file: {e}")
+    else:
+        print(f"File '{path}' does not exist.")

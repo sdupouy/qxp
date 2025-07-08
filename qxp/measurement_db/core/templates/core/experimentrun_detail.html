@@ -7,9 +7,13 @@
   <h1>Experiment run</h1>
   
   {% if object.starred %}
-    <button id="starred-badge" type="button" class="btn btn-warning btn-sm mb-3" data-entry-id="{{ object.id }}">Starred<i class="bi bi-star-fill ms-2"></i></button>
+    <button id="starred-badge" type="button" class="btn btn-warning btn-sm mb-3 me-2" data-entry-id="{{ object.id }}"><i class="bi bi-star-fill me-2"></i>Starred</button>
   {% else %}
-    <button id="starred-badge" type="button" class="btn btn-secondary btn-sm mb-3" data-entry-id="{{ object.id }}">Not starred<i class="bi bi-star ms-2"></i></button>
+    <button id="starred-badge" type="button" class="btn btn-secondary btn-sm mb-3 me-2" data-entry-id="{{ object.id }}"><i class="bi bi-star me-2"></i>Not starred</button>
+  {% endif %}
+
+  {% if allow_delete %}
+    <a role="button" class="btn btn-danger btn-sm mb-3" href="{% url 'experiment-run-delete' object.id %}"><i class="bi bi-trash3-fill me-2"></i>Delete</a>
   {% endif %}
 
   <dl>
@@ -78,7 +82,7 @@
   {% endwith %}
 
   <h2>Figure</h2>
-  <img src="{% url 'experiment-run-figure' object.pk %}" alt="experiment run figure" class="img-fluid mb-3" style="max-height: 700px;">
+  <img src="{% url 'experiment-run-figure' object.pk %}" alt="No experiment run figure found." class="img-fluid mb-3" style="max-height: 700px;">
 
   <h2>Setup</h2>
   <div class="row my-3">
