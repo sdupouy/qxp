@@ -23,7 +23,8 @@ def fetch_last_measured_value(parameter_ident, unit=None):
     """
     measurement = Measurement.objects.filter(
         experiment_run__cooldown__chip=current_chip(),
-        parameter__identifier=parameter_ident
+        parameter__identifier=parameter_ident,
+        is_valid=True
     ).order_by('experiment_run__datetime').last()
     if measurement:
         if unit is not None:

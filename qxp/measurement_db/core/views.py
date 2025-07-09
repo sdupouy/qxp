@@ -42,6 +42,7 @@ class CooldownDetailView(DetailView, ModelFormMixin):
         # This query gets the latest measurement for each parameter measured on the chip
         latest_measurements = Measurement.objects.filter(
             experiment_run__cooldown=self.get_object(),
+            is_valid=True
         ).annotate(
             row_number=Window(
                 expression=RowNumber(),
@@ -103,6 +104,7 @@ class ChipDetailView(DetailView, ModelFormMixin):
         # This query gets the latest measurement for each parameter measured on the chip
         latest_measurements = Measurement.objects.filter(
             experiment_run__cooldown__chip=self.get_object(),
+            is_valid=True
         ).annotate(
             row_number=Window(
                 expression=RowNumber(),

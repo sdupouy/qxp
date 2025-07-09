@@ -16,53 +16,81 @@
     <a role="button" class="btn btn-danger btn-sm mb-3" href="{% url 'experiment-run-delete' object.id %}"><i class="bi bi-trash3-fill me-2"></i>Delete</a>
   {% endif %}
 
-  <div class="d-flex flex-wrap">
-    <dl class="me-4 mb-2">
-      <dt>Date</dt>
-      <dd>{{ object.datetime }}</dd>
-    </dl>
-    <dl class="me-4 mb-2">
-      <dt>Experiment</dt>
-      <dd>
-        <a href="{% url 'experiment-detail' object.experiment.identifier %}">
-          {{ object.experiment.display_name }}
-        </a>
-      </dd>
-    </dl>
-    <dl class="me-4 mb-2">
-      <dt>Chip # cooldown</dt>
-      <dd>
-        <a href="{% url 'chip-detail' object.cooldown.chip.identifier %}">
-          {{ object.cooldown.chip.identifier }}</a>
-        <a href="{% url 'cooldown-detail' object.cooldown.id %}">
-          # {{ object.cooldown.number }}</a>
-      </dd>
-    </dl>
-    <dl class="me-4 mb-2">
-      <dt>Duration</dt>
-      <dd>{{ object.duration|format_timedelta }}</dd>
-    </dl>
-    <dl class="me-4 mb-2">
-      <dt>Data at</dt>
-      <dd>{{ object.data_path }}</dd>
-    </dl>
+  <div class="row">
+    <div class="col-md-8">
+      <div class="d-flex flex-wrap">
+        <dl class="me-4 mb-2">
+          <dt>Date</dt>
+          <dd>{{ object.datetime }}</dd>
+        </dl>
+        <dl class="me-4 mb-2">
+          <dt>Experiment</dt>
+          <dd>
+            <a href="{% url 'experiment-detail' object.experiment.identifier %}">
+              {{ object.experiment.display_name }}
+            </a>
+          </dd>
+        </dl>
+        <dl class="me-4 mb-2">
+          <dt>Chip # cooldown</dt>
+          <dd>
+            <a href="{% url 'chip-detail' object.cooldown.chip.identifier %}">
+              {{ object.cooldown.chip.identifier }}</a>
+            <a href="{% url 'cooldown-detail' object.cooldown.id %}">
+              # {{ object.cooldown.number }}</a>
+          </dd>
+        </dl>
+        <dl class="me-4 mb-2">
+          <dt>Duration</dt>
+          <dd>{{ object.duration|format_timedelta }}</dd>
+        </dl>
+        <dl class="me-4 mb-2">
+          <dt>Data at</dt>
+          <dd>{{ object.data_path }}</dd>
+        </dl>
+      </div>
+      <dl class="me-4 mb-2">
+        <dt class="d-flex align-items-center">
+          Comment
+          {% if object.comment %}
+            <button id="edit-comment-btn" type="button" class="btn btn-primary ms-3"><i class="bi bi-pencil me-1"></i>Edit</button>
+          {% endif %}
+        </dt>
+        <dd>
+          <span id="comment-text">{{ object.comment }}</span>
+          <form method="post" id="comment-form" class="mt-2 mb-3 no-labels {% if object.comment %}d-none{% endif %}">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-pencil-fill me-2"></i>Add a comment</button>
+          </form>
+        </dd>
+      </dl>
+    </div>
+    <div class="col-md-4" data-bs-toggle="modal" data-bs-target="#figureModal">
+      <div class="card">
+        <div class="card-header">
+          Figure
+        </div>
+        <div class="image-hover img-container">
+          <img class="img-fluid card-img-bottom mh-300px" src="{% url 'experiment-run-figure' object.pk %}" alt="No experiment run figure found.">
+        </div>
+      </div>
+    </div>
   </div>
-  <dl class="me-4 mb-2">
-    <dt class="d-flex align-items-center">
-      Comment
-      {% if object.comment %}
-        <button id="edit-comment-btn" type="button" class="btn btn-primary ms-3"><i class="bi bi-pencil me-1"></i>Edit</button>
-      {% endif %}
-    </dt>
-    <dd>
-      <span id="comment-text">{{ object.comment }}</span>
-      <form method="post" id="comment-form" class="mt-2 mb-3 no-labels {% if object.comment %}d-none{% endif %}">
-        {% csrf_token %}
-        {{ form|crispy }}
-        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-pencil-fill me-2"></i>Add a comment</button>
-      </form>
-    </dd>
-  </dl>
+
+  <div class="modal fade" id="figureModal" tabindex="-1" aria-labelledby="figureModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="figureModalLabel">{{ object.experiment.display_name }}</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <img src="{% url 'experiment-run-figure' object.pk %}" alt="No experiment run figure found." class="img-fluid">
+        </div>
+      </div>
+    </div>
+  </div>
 
   <h2>Measured parameters</h2>
   {% with measurements=object.measurement_set.all %}
@@ -97,9 +125,6 @@
       <p>No measured parameter associated to this experiment run.</p>
     {% endif %}
   {% endwith %}
-
-  <h2>Figure</h2>
-  <img src="{% url 'experiment-run-figure' object.pk %}" alt="No experiment run figure found." class="img-fluid mb-3" style="max-height: 700px;">
 
   <h2>Setup</h2>
   <div class="row my-3">
