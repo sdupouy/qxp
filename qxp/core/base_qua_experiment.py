@@ -132,6 +132,14 @@ class BaseQuaExperiment(ABC):
         """ Update the plot. """
         pass
 
+    def validate(self):
+        """ Validate whether the measurements were successful.
+        Returns:
+            A boolean determining whether all measured parameters are valid, or a dictonary of booleans where keys
+            indicate a specific parameter name.
+        """
+        return False
+
     def plot(self):
         """ Initialize and update the plot with self.data. """
         updatables = self.initialize_plot()
@@ -250,14 +258,24 @@ class BaseQuaExperiment(ABC):
         experiment_run.save()
         print("[+] Logged experiment run to database")
 
-    def save_measured_params_to_db(self):
-        """ Save the measured parameters to the database. """
+    def save_measured_params_to_db(self, are_valid):
+        """ Save the measured parameters to the database.
+        Args:
+            are_valid (bool or dict): Whether the measured parameters are valid. Can be a boolean, which then applies
+                to all measured parameters, or a dictionary of booleans where the keys are the parameter names.
+        """
         if self.measured_db_params:
             experiment_run = ExperimentRun.objects.get(datetime=datetime.fromisoformat(self.start_time))
             for key, value_dict in self.measured_db_params.items():
                 value = value_dict['value']
                 uncertainty = value_dict.get('uncertainty')
                 unit = value_dict.get('unit')
+
+                # Determine whether the measurement is valid
+                if isinstance(are_valid, bool):
+                    is_valid = are_valid
+                else:
+                    is_valid = are_valid[key]
 
                 # Extract or create the parameter in the database
                 parameter, _ = Parameter.objects.get_or_create(
@@ -281,13 +299,14 @@ class BaseQuaExperiment(ABC):
                     value=value,
                     uncertainty=uncertainty,
                     experiment_run=experiment_run,
+                    is_valid=is_valid
                 )
                 measurement.save()
                 print(f"[+] Saved measured parameter {key} to database")
         else:
             print("[!] No measured values to save to database. Is do_fit=True?")
 
-    def run(self, simulate=False, do_fit=True, do_plot=True, do_save=True, do_update_db=False):
+    def run(self, simulate=False, do_fit=True, do_plot=True, do_save=True, do_update_db=True, validate='auto'):
         """ Run the experiment: set up, measure, analyze, plot and save.
         Args:
             simulate (bool): Simulate the QUA program instead of running it.
@@ -295,6 +314,8 @@ class BaseQuaExperiment(ABC):
             do_plot (bool): Whether to plot the data.
             do_save (bool): Whether to save the data.
             do_update_db (bool): Whether to update the database.
+            validate (str): Whether to validate the data. Can take 'yes', 'no' or 'auto' (default), which relies on the
+                `validate` method to determine if the measurements should be validated.
         """
         print('[+] Running', self.identifier)
         self.start_time = get_current_timestamp()
@@ -340,8 +361,15 @@ class BaseQuaExperiment(ABC):
             self.save()
             self.log_experiment_run_to_db()
 
-        if do_update_db:
-            self.save_measured_params_to_db()
+            if do_update_db:
+                match validate:
+                    case 'yes':
+                        are_valid = True
+                    case 'no':
+                        are_valid = False
+                    case 'auto':
+                        are_valid = self.validate()
+                self.save_measured_params_to_db(are_valid)
 
     def configure(self, force_exp_config=None, force_instruments_config=None):
         """ Build experiment, instruments, and QUA configuration dictionaries.

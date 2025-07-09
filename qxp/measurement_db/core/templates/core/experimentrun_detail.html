@@ -16,31 +16,38 @@
     <a role="button" class="btn btn-danger btn-sm mb-3" href="{% url 'experiment-run-delete' object.id %}"><i class="bi bi-trash3-fill me-2"></i>Delete</a>
   {% endif %}
 
-  <dl>
-    <dt>Date</dt>
-    <dd>{{ object.datetime }}</dd>
-
-    <dt>Experiment</dt>
-    <dd>
-      <a href="{% url 'experiment-detail' object.experiment.identifier %}">
-        {{ object.experiment.display_name }}
-      </a>
-    </dd>
-
-    <dt>Chip # cooldown</dt>
-    <dd>
-      <a href="{% url 'chip-detail' object.cooldown.chip.identifier %}">
-        {{ object.cooldown.chip.identifier }}</a>
-      <a href="{% url 'cooldown-detail' object.cooldown.id %}">
-        # {{ object.cooldown.number }}</a>
-    </dd>
-
-    <dt>Duration</dt>
-    <dd>{{ object.duration|format_timedelta }}</dd>
-
-    <dt>Data at</dt>
-    <dd>{{ object.data_path }}</dd>
-  
+  <div class="d-flex flex-wrap">
+    <dl class="me-4 mb-2">
+      <dt>Date</dt>
+      <dd>{{ object.datetime }}</dd>
+    </dl>
+    <dl class="me-4 mb-2">
+      <dt>Experiment</dt>
+      <dd>
+        <a href="{% url 'experiment-detail' object.experiment.identifier %}">
+          {{ object.experiment.display_name }}
+        </a>
+      </dd>
+    </dl>
+    <dl class="me-4 mb-2">
+      <dt>Chip # cooldown</dt>
+      <dd>
+        <a href="{% url 'chip-detail' object.cooldown.chip.identifier %}">
+          {{ object.cooldown.chip.identifier }}</a>
+        <a href="{% url 'cooldown-detail' object.cooldown.id %}">
+          # {{ object.cooldown.number }}</a>
+      </dd>
+    </dl>
+    <dl class="me-4 mb-2">
+      <dt>Duration</dt>
+      <dd>{{ object.duration|format_timedelta }}</dd>
+    </dl>
+    <dl class="me-4 mb-2">
+      <dt>Data at</dt>
+      <dd>{{ object.data_path }}</dd>
+    </dl>
+  </div>
+  <dl class="me-4 mb-2">
     <dt class="d-flex align-items-center">
       Comment
       {% if object.comment %}
@@ -52,7 +59,7 @@
       <form method="post" id="comment-form" class="mt-2 mb-3 no-labels {% if object.comment %}d-none{% endif %}">
         {% csrf_token %}
         {{ form|crispy }}
-        <button type="submit" class="btn btn-primary"><i class="bi bi-pencil-fill me-2"></i>Add a comment</button>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-pencil-fill me-2"></i>Add a comment</button>
       </form>
     </dd>
   </dl>
@@ -60,11 +67,14 @@
   <h2>Measured parameters</h2>
   {% with measurements=object.measurement_set.all %}
     {% if measurements %}
+      <button id="validate-all-measurements-btn" type="button" class="btn btn-success btn-sm me-2"><i class="bi bi-check-circle-fill me-2"></i>Validate all</button>
+      <button id="invalidate-all-measurements-btn" type="button" class="btn btn-danger btn-sm me-2"><i class="bi bi-x-circle-fill me-2"></i>Invalidate all</button>
       <table class="table table-hover">
         <thead>
           <tr>
             <th scope="col">Parameter</th>
             <th scope="col">Value</th>
+            <th scope="col">Valid</th>
           </tr>
         </thead>
         <tbody>
@@ -72,6 +82,13 @@
           <tr>
             <td><a href="{% url 'parameter-detail' measurement.parameter.identifier %}">{{ measurement.parameter.display_name_or_identifier }}</a></td>
             <td>{{ measurement.value_uncertainty_unit }}</td>
+            <td class="align-middle">
+              {% if measurement.is_valid %}
+                <button type="button" class="valid-measurement-btn btn btn-success rounded-circle p-0 d-flex align-items-center justify-content-center" data-entry-id="{{ measurement.id }}"><i class="bi bi-check"></i></button>
+              {% else %}
+                <button type="button" class="valid-measurement-btn btn btn-danger rounded-circle p-0 d-flex align-items-center justify-content-center" data-entry-id="{{ measurement.id }}"><i class="bi bi-x"></i></button>
+              {% endif %}
+            </td>
           </tr>
         {% endfor %}
         </tbody>
@@ -241,6 +258,7 @@
 
   <script src="{% static 'core/js/get_cookie.js' %}"></script>
   <script src="{% static 'core/js/toggle_star_exp_run.js' %}"></script>
+  <script src="{% static 'core/js/toggle_measurement_is_valid.js' %}"></script>
   {% if object.comment %}
     <script src="{% static 'core/js/edit_comment_btn.js' %}"></script>
   {% endif %}

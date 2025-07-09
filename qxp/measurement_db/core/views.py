@@ -24,7 +24,7 @@ class IndexView(TemplateView):
             context['cooldown'] = cooldown
             context['chip'] = cooldown.chip
             context['exp_runs'] = ExperimentRun.objects.filter(cooldown=context['cooldown']).order_by('-datetime')[:10]
-            context['measurements'] = Measurement.objects.all()[:10]
+            context['measurements'] = Measurement.objects.filter(is_valid=True)[:10]
             if OpticalTable.objects.exists():
                 context['optical_table'] = OpticalTable.objects.latest('datetime')
         else:
@@ -162,7 +162,7 @@ class ExperimentRunDetailView(DetailView, ModelFormMixin):
 
     def get_form(self, *args, **kwargs):
         form = super().get_form(*args, **kwargs)
-        form.fields['comment'].widget.attrs.update({'rows': 3, 'cols': 40})
+        form.fields['comment'].widget.attrs.update({'rows': 2, 'cols': 60})
         return form
 
     def post(self, request, *args, **kwargs):
@@ -232,6 +232,19 @@ class ExperimentRunDeleteView(DeleteView):
 
 class MeasurementListView(ListView):
     model = Measurement
+
+    def get_queryset(self):
+        return Measurement.objects.filter(is_valid=True)
+
+
+def measurement_toggle_is_valid(request, pk):
+    """ View to toggle the starred field of an ExperimentRun. """
+    if request.method == "POST":
+        entry = get_object_or_404(Measurement, id=pk)
+        entry.is_valid = not entry.is_valid
+        entry.save()
+        return JsonResponse({"success": True, "is_valid": entry.is_valid})
+    return redirect("index")
 
 
 class ParameterDetailView(DetailView):

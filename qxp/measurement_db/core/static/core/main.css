@@ -101,3 +101,8 @@ a.btn:hover, a.navbar-brand:hover {
     --bs-btn-padding-x: .4rem;
     --bs-btn-font-size: .7rem;
 }
+
+.valid-measurement-btn {
+    height: 20px;
+    width: 20px;
+}

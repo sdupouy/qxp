@@ -123,6 +123,7 @@ class Measurement(models.Model):
     value = models.FloatField()
     uncertainty = models.FloatField(null=True, blank=True)
     experiment_run = models.ForeignKey(ExperimentRun, on_delete=models.CASCADE)
+    is_valid = models.BooleanField(default=False)
 
     @property
     def value_uncertainty_unit(self):

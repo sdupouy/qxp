@@ -51,7 +51,7 @@ class ParameterAdmin(admin.ModelAdmin):
 
 
 class MeasurementAdmin(admin.ModelAdmin):
-    list_display = ['parameter', 'experiment_run__datetime', 'value_uncertainty_unit']
+    list_display = ['parameter', 'experiment_run__datetime', 'value_uncertainty_unit', 'is_valid']
 
 
 class ExperimentAdmin(admin.ModelAdmin):
