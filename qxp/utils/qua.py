@@ -44,7 +44,25 @@ def wait_until_job_is_paused(job):
 
 def result_handles_to_data_dict(result_handles):
     """ Build a data dictionary from a StreamingResultFetcher (result_handles) object. """
+    def unpack_values(data):
+        """ Unpack structured NumPy dtype if needed. """
+        if data.dtype.names is not None:
+            data = data["value"]
+        return data
+
     data_dict = {}
     for name, handle in result_handles:
-        data_dict[name] = handle.fetch_all()
+        data_dict[name] = unpack_values(handle.fetch_all())
     return data_dict
+
+
+def truncate_to_smallest(arrays):
+    """ Truncate all arrays to the length of the smallest. """
+    min_length = min([len(a) for a in arrays])
+    return [a[:min_length] for a in arrays]
+
+
+def format_progress(progress):
+    """ Format a percentage into a progress bar. """
+    bar = '=' * (round(progress) // 2) + ' ' * (50 - (round(progress) // 2))
+    return f"Progress [{bar}] {progress:.1f}%"

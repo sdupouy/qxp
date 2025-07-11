@@ -50,3 +50,5 @@ This can be overridden by setting the `QXP_PROJECT_DIR` environment variable.
 - implement live saving
 - track fridge temperature (live and during expruns)
 - data backup functionality
+- make experiment run parameters (passed in `__init__`) available in webpanel config
+- progress bar

@@ -105,6 +105,13 @@ class SkeletonExperiment(BaseQuaExperiment):
             # KEY: VALUE,
         }
 
+    def validate(self):
+        ...
+        return {
+            'parameter1': True,
+            'parameter2': False,
+        }
+
     def initialize_plot(self):
         fig, axs = plt.subplots()
         ...
@@ -115,10 +122,3 @@ class SkeletonExperiment(BaseQuaExperiment):
 
     def update_plot(self, updatables):
         updatables['lines1'].set_data(...)
-
-    def validate(self):
-        ...
-        return {
-            'parameter1': True,
-            'parameter2': False,
-        }

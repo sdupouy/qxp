@@ -253,3 +253,8 @@ class ParameterDetailView(DetailView):
     model = Parameter
     slug_field = 'identifier'
     slug_url_kwarg = 'identifier'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['valid_measurements'] = Measurement.objects.filter(parameter=self.get_object(), is_valid=True)
+        return context

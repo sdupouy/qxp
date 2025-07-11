@@ -11,6 +11,7 @@ from qxp.config import EXP_CONFIG, get_qua_config, OPX_CONNECTION, INSTRUMENTS_C
 from qxp.utils.config import update_nested_dict
 from qxp.utils.database import current_cooldown
 from qxp.utils.instruments import initialize_instruments_from_config, turn_off_instruments_from_config
+from qxp.utils.qua import format_progress
 from qxp.utils.save import get_current_timestamp, get_experiment_params, get_latest_run_path, \
     save_dict_to_hdf5, load_dict_from_hdf5, make_figure_save_path, \
     make_debug_script_save_path, make_data_save_path, display_timestamp
@@ -113,6 +114,10 @@ class BaseQuaExperiment(ABC):
         """
         return {}
 
+    def progress(self):
+        """ Return the percentage of progress, or None if not implemented. """
+        return None
+
     @abstractmethod
     def fit(self):
         """
@@ -121,6 +126,14 @@ class BaseQuaExperiment(ABC):
         It should return a flat dictionary containing the measured parameters to be saved to the database.
         """
         pass
+
+    def validate(self):
+        """ Validate whether the measurements were successful.
+        Returns:
+            A boolean determining whether all measured parameters are valid, or a dictonary of booleans where keys
+            indicate a specific parameter name.
+        """
+        return False
 
     @abstractmethod
     def initialize_plot(self):
@@ -131,14 +144,6 @@ class BaseQuaExperiment(ABC):
     def update_plot(self, updatables):
         """ Update the plot. """
         pass
-
-    def validate(self):
-        """ Validate whether the measurements were successful.
-        Returns:
-            A boolean determining whether all measured parameters are valid, or a dictonary of booleans where keys
-            indicate a specific parameter name.
-        """
-        return False
 
     def plot(self):
         """ Initialize and update the plot with self.data. """
@@ -160,6 +165,13 @@ class BaseQuaExperiment(ABC):
             self.data = self.get_data(job.result_handles)
             self.processed_data = self.process_data()
             self.update_plot(updatables)
+
+            # Show the progress bar
+            progress = self.progress()
+            if progress is not None:
+                print('\r' + format_progress(progress), end='')
+
+            # Wait for 5 seconds
             plt.pause(5)
 
     def initialize_instruments(self):
@@ -272,10 +284,10 @@ class BaseQuaExperiment(ABC):
                 unit = value_dict.get('unit')
 
                 # Determine whether the measurement is valid
-                if isinstance(are_valid, bool):
-                    is_valid = are_valid
-                else:
+                if isinstance(are_valid, dict):
                     is_valid = are_valid[key]
+                else:
+                    is_valid = are_valid
 
                 # Extract or create the parameter in the database
                 parameter, _ = Parameter.objects.get_or_create(
@@ -306,14 +318,13 @@ class BaseQuaExperiment(ABC):
         else:
             print("[!] No measured values to save to database. Is do_fit=True?")
 
-    def run(self, simulate=False, do_fit=True, do_plot=True, do_save=True, do_update_db=True, validate='auto'):
+    def run(self, simulate=False, do_fit=True, do_plot=True, do_save=True, validate='auto'):
         """ Run the experiment: set up, measure, analyze, plot and save.
         Args:
             simulate (bool): Simulate the QUA program instead of running it.
             do_fit (bool): Whether to fit the data.
             do_plot (bool): Whether to plot the data.
             do_save (bool): Whether to save the data.
-            do_update_db (bool): Whether to update the database.
             validate (str): Whether to validate the data. Can take 'yes', 'no' or 'auto' (default), which relies on the
                 `validate` method to determine if the measurements should be validated.
         """
@@ -337,6 +348,7 @@ class BaseQuaExperiment(ABC):
             job_management_thread.start()
 
         self.live_plot(job)
+        print()  # newline after the progress bar
 
         if job_management_thread:
             job_management_thread.join()  # wait for the thread to terminate (normally when the job finished processing)
@@ -356,20 +368,20 @@ class BaseQuaExperiment(ABC):
                 fig_path = make_figure_save_path(self.identifier, self.start_time)
                 plt.gcf().savefig(fig_path)
                 print("[+] Saved figure at", fig_path)
+            plt.close()
 
         if do_save:
             self.save()
             self.log_experiment_run_to_db()
 
-            if do_update_db:
-                match validate:
-                    case 'yes':
-                        are_valid = True
-                    case 'no':
-                        are_valid = False
-                    case 'auto':
-                        are_valid = self.validate()
-                self.save_measured_params_to_db(are_valid)
+            match validate:
+                case 'yes':
+                    are_valid = True
+                case 'no':
+                    are_valid = False
+                case 'auto':
+                    are_valid = self.validate()
+            self.save_measured_params_to_db(are_valid)
 
     def configure(self, force_exp_config=None, force_instruments_config=None):
         """ Build experiment, instruments, and QUA configuration dictionaries.
@@ -389,7 +401,7 @@ class BaseQuaExperiment(ABC):
         self.processed_config = self.process_config()  # does nothing unless redefined in child class
 
     def configure_and_run(self, force_exp_config=None, force_instruments_config=None,
-                          simulate=False, do_fit=True, do_plot=True, do_save=True, do_update_db=False):
+                          simulate=False, do_fit=True, do_plot=True, do_save=True):
         """ Automatically configure and run the experiment.
         Args:
             force_exp_config (dict, optional): Dictionary to override values of the experiment config.
@@ -398,10 +410,9 @@ class BaseQuaExperiment(ABC):
             do_fit (bool): Whether to fit the data.
             do_plot (bool): Whether to plot the data.
             do_save (bool): Whether to save the data.
-            do_update_db (bool): Whether to update the database.
         """
         self.configure(force_exp_config, force_instruments_config)
-        self.run(simulate=simulate, do_fit=do_fit, do_plot=do_plot, do_save=do_save, do_update_db=do_update_db)
+        self.run(simulate=simulate, do_fit=do_fit, do_plot=do_plot, do_save=do_save)
 
     def __str__(self):
         return f'{self.identifier}__{display_timestamp(self.start_time)}'
