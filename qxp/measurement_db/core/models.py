@@ -67,7 +67,7 @@ class Experiment(models.Model):
         return reverse('experiment-detail', kwargs={'identifier': self.identifier})
 
     def __str__(self):
-        return self.identifier
+        return self.display_name or self.identifier
 
     class Meta:
         ordering = ['identifier']
@@ -91,7 +91,7 @@ class ExperimentRun(models.Model):
         return reverse('experiment-run-detail', kwargs={'pk': self.pk})
 
     def __str__(self):
-        return f'{self.experiment.identifier} of {self.cooldown.chip.identifier} ({str(self.datetime)})'
+        return f'{self.experiment} of {self.cooldown.chip.identifier} ({str(self.datetime)})'
 
     class Meta:
         ordering = ['-datetime']
@@ -112,7 +112,7 @@ class Parameter(models.Model):
         return reverse('parameter-detail', kwargs={'identifier': self.identifier})
 
     def __str__(self):
-        return self.identifier
+        return self.display_name_or_identifier
 
     class Meta:
         ordering = ['identifier']
@@ -138,7 +138,7 @@ class Measurement(models.Model):
             return f'{stripped_value}{unit}'
 
     def __str__(self):
-        return f"{self.parameter.identifier} ({self.experiment_run.datetime})"
+        return f"{self.parameter} ({self.experiment_run.datetime})"
 
     class Meta:
         unique_together = [['parameter', 'experiment_run']]

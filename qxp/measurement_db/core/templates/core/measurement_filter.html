@@ -1,8 +1,14 @@
 {% extends 'core/base.html' %}
+{% load crispy_forms_tags %}
 
 {% block content %}
   <h1>Measurements</h1>
-  
+
+  <form method="get" class="mb-3">
+    {{ filter.form|crispy }}
+    <button type="submit" class="btn btn-primary me-2">Filter</button>
+    <a href="{% url 'measurement-list' %}" class="btn btn-outline-secondary" role="button">Reset</a>
+  </form>
   {% if object_list %}
     <table class="table table-hover">
       <thead>
@@ -27,6 +33,6 @@
       </tbody>
     </table>
   {% else %}
-    <p>No measurement logged in the database yet.</p>
+    <p>No (valid) measurement logged in the database yet.</p>
   {% endif %}
 {% endblock %}

@@ -7,11 +7,13 @@ from django.http import JsonResponse, FileResponse, Http404, HttpResponseForbidd
 from django.utils import timezone
 from django.urls import reverse_lazy
 from django.views.generic.edit import ModelFormMixin
+from django_filters.views import FilterView
 
 from qxp.utils.save import load_dict_from_hdf5, make_json_serializable, figure_path_from_data_path, \
     debug_script_path_from_data_path, delete_file
 from qxp.config import ALLOW_DELETE_EXPRUN
 from .models import Cooldown, ExperimentRun, Measurement, Parameter, Chip, OpticalTable, Experiment
+from .filters import ExperimentRunFilter, MeasurementFilter
 
 
 class IndexView(TemplateView):
@@ -154,8 +156,9 @@ class ExperimentDetailView(DetailView):
     slug_url_kwarg = 'identifier'
 
 
-class ExperimentRunListView(ListView):
+class ExperimentRunListView(FilterView):
     model = ExperimentRun
+    filterset_class = ExperimentRunFilter
 
 
 class ExperimentRunDetailView(DetailView, ModelFormMixin):
@@ -232,8 +235,9 @@ class ExperimentRunDeleteView(DeleteView):
         return super().form_valid(form)
 
 
-class MeasurementListView(ListView):
+class MeasurementListView(FilterView):
     model = Measurement
+    filterset_class = MeasurementFilter
 
     def get_queryset(self):
         return Measurement.objects.filter(is_valid=True)
