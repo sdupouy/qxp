@@ -13,6 +13,9 @@ from qxp.utils.waveforms import gaussian_shape
 # Path to the matplotlib custom style to use
 MPLSTYLE_PATH = Path(__file__).resolve().parent / 'custom.mplstyle'
 
+# Path to the backup drive
+# BACKUP_PATH = ...
+
 # The experiment configuration is used to build the QUA configuration dictionary.
 EXP_CONFIG = {
     "ro_resonator": {

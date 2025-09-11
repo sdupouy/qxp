@@ -44,11 +44,9 @@ This can be overridden by setting the `QXP_PROJECT_DIR` environment variable.
 - use katex to render parameter latex in the web panel
 - handle missing optional fields on models (e.g. pictures)
 - make all scripts (e.g. bootstrap) local so that the panel works well offline
-- add filters on the measurements and exp_run list views
 - matplotlib plots of the parameter's evolution
 - find a way to make QUA jobs thread safe
 - implement live saving
 - track fridge temperature (live and during expruns)
-- data backup functionality
+- debug data backup functionality
 - make experiment run parameters (passed in `__init__`) available in webpanel config
-- progress bar

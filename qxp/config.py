@@ -24,6 +24,7 @@ DEBUG_SCRIPTS_DIRNAME = 'debug_scripts'
 FIGURES_DIRNAME = 'figures'
 TIMESTAMP_FORMAT = "%d-%m-%Y_%Hh%Mm%S"
 TIME_ZONE = 'Europe/Paris'
+STORAGE_PATH = QXP_PROJECT_DIR / 'storage'
 
 # Load experiment configuration from the local module.
 experiment_config = load_experiment_config_module(EXPERIMENT_CONFIG_PATH)  # The user configuration module
@@ -36,5 +37,4 @@ OPX_CONNECTION = experiment_config.OPX_CONNECTION
 INSTRUMENTS_CONFIG = experiment_config.INSTRUMENTS_CONFIG
 get_qua_config = experiment_config.get_qua_config  # Function that returns the QUA config
 ALLOW_DELETE_EXPRUN = getattr(experiment_config, 'ALLOW_DELETE_EXPRUN', True)  # Whether to allow to delete experiment runs from the webpanel
-
-STORAGE_PATH = QXP_PROJECT_DIR / 'storage'
+BACKUP_PATH = getattr(experiment_config, 'BACKUP_PATH', None)

@@ -201,7 +201,7 @@ def exp_run_figure(request, pk):
     entry = get_object_or_404(ExperimentRun, id=pk)
     image_path = figure_path_from_data_path(entry.data_path)
     if not os.path.exists(image_path):
-        raise Http404("Image not found")
+        raise Http404(f"Image not found at path {image_path}")
     return FileResponse(open(image_path, 'rb'), content_type='image/png')
 
 
