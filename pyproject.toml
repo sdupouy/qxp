@@ -16,7 +16,8 @@ dependencies = [
     "scipy",
     "matplotlib",
     "pyvisa",
-    "h5py"
+    "h5py",
+    "tqdm"
 ]
 authors = [
     {name = "Simon Dupouy", email = "simon.dupouy@gmail.com"},

@@ -2,6 +2,24 @@ import math
 import re
 
 
+class Unit:
+    """Units for use by QUA programs."""
+    ns = 1
+    us = 1_000
+    ms = 1_000_000
+    s = 1_000_000_000
+
+    Hz = 1
+    kHz = 1_000
+    MHz = 1_000_000
+    GHz = 1_000_000_000
+
+    V = 1
+    mV = 1e-3
+    uV = 1e-6
+    nV = 1e-9
+
+
 def extract_unit_prefix(unit):
     """ Take a string describing a unit and extract the multiplier and the unprefixed unit. """
     prefixes = {
