@@ -33,6 +33,9 @@ def cosine_tmax_from_popt(popt):
         The time of the first maximum.
     """
     amplitude, period, phase, offset = popt
+    if period < 0:
+        phase *= -1
+        period *= -1
     if amplitude < 0:
         phase += np.pi
     phase %= 2*np.pi

@@ -79,13 +79,13 @@
   </div>
 
   <div class="modal fade" id="figureModal" tabindex="-1" aria-labelledby="figureModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-xl">
       <div class="modal-content">
         <div class="modal-header">
           <h1 class="modal-title fs-5" id="figureModalLabel">{{ object.experiment.display_name }}</h1>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body text-center">
           <img src="{% url 'experiment-run-figure' object.pk %}" alt="No experiment run figure found." class="img-fluid">
         </div>
       </div>

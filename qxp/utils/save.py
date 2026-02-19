@@ -85,46 +85,96 @@ def make_debug_script_save_path(experiment_ident, timestamp):
     return save_path  # must be a pathlib.Path object
 
 
+def _worth_saving(value):
+    """ Determine whether a value is worth saving to the datafile. """
+    if value is None:
+        return False
+    if hasattr(value, '__len__'):
+        return len(value) > 0
+    return True
+
+
+def _delete_key_if_exists(hdf_group: h5py.Group, key: str):
+    """ Delete a key from an HDF5 group and group attributes if it exists. """
+    # Delete dataset/group with that name if present
+    if key in hdf_group:
+        del hdf_group[key]
+    # Delete attribute with that name if present
+    if key in hdf_group.attrs:
+        del hdf_group.attrs[key]
+    # Also remove the masked-array companion dataset
+    mask_key = f"_mask_{key}"
+    if mask_key in hdf_group:
+        del hdf_group[mask_key]
+
+
+def _ensure_group(parent: h5py.Group, key: str) -> h5py.Group:
+    """ Return an existing subgroup of parent; otherwise create it (and eventually delete prior content). """
+    if key in parent:
+        obj = parent[key]
+        if isinstance(obj, h5py.Group):
+            return obj
+        del parent[key]  # dataset or other -> delete to replace with group
+
+    # If an attribute with same key exists, remove it
+    if key in parent.attrs:
+        del parent.attrs[key]
+
+    return parent.create_group(key)
+
+
+def _recursively_save_dict(hdf_group: h5py.Group, dict_to_save: dict):
+    """ Helper function to recursively save a dictionary to an open HDF5 group. """
+    for key, value in dict_to_save.items():
+        if _worth_saving(value):
+            # We store the qua_config as a string as it contains lists of dicts which aren't HDF5-friendly
+            if key == "qua_config":
+                _delete_key_if_exists(hdf_group, key)
+                hdf_group.create_dataset(key, data=json.dumps(value))
+
+            # Save dictionaries recursively
+            elif isinstance(value, dict):
+                hdf_subgroup = _ensure_group(hdf_group, str(key))
+                _recursively_save_dict(hdf_subgroup, value)
+
+            # Save strings/ints/floats/bools as attributes
+            elif isinstance(value, (str, int, float, bool)):
+                hdf_group.attrs[key] = value
+
+            # Save the data and mask of masked arrays separately
+            elif isinstance(value, np.ma.MaskedArray):
+                _delete_key_if_exists(hdf_group, key)  # will also delete the mask key
+                hdf_group.create_dataset(key, data=value.data)
+                hdf_group.create_dataset(f'_mask_{key}', data=value.mask)
+
+            # Save other data types (typically ndarrays) as datasets
+            else:
+                _delete_key_if_exists(hdf_group, key)
+                hdf_group.create_dataset(key, data=value)
+
+
 def save_dict_to_hdf5(dict_to_save, save_path):
     """ Save dictionary to HDF5 file.
     Args:
         dict_to_save: Dictionary to save.
         save_path: Path to save HDF5 file.
     """
-    def _worth_saving(value):
-        if value is None:
-            return False
-        if hasattr(value, '__len__'):
-            return len(value) > 0
-        return True
-
-    def _recursively_save_dict(hdf_group, dict_to_save):
-        for key, value in dict_to_save.items():
-            if _worth_saving(value):
-                # We store the qua_config as a string as it contains lists of dicts which aren't HDF5-friendly
-                if key == "qua_config":
-                    hdf_group.create_dataset(key, data=json.dumps(value))
-
-                # Save dictionaries recursively
-                elif isinstance(value, dict):
-                    hdf_subgroup = hdf_group.create_group(str(key))
-                    _recursively_save_dict(hdf_subgroup, value)
-
-                # Save strings/ints/floats/bools as attributes
-                elif isinstance(value, (str, int, float, bool)):
-                    hdf_group.attrs[key] = value
-
-                # Save the data and mask of masked arrays separately
-                elif isinstance(value, np.ma.MaskedArray):
-                    hdf_group.create_dataset(key, data=value.data)
-                    hdf_group.create_dataset(f'_mask_{key}', data=value.mask)
-
-                # Save other data types (typically ndarrays) as datasets
-                else:
-                    hdf_group.create_dataset(key, data=value)
-
     with h5py.File(save_path, 'x') as hdf_file:  # Create the file and error if exists
         _recursively_save_dict(hdf_file, dict_to_save)
+
+
+def update_dict_in_hdf5(dict_to_update, path, delete_first=False):
+    """ Update an HDF5 file from a dictionary.
+    Args:
+        dict_to_update: Dictionary holding values to update.
+        path: Path to the HDF5 file.
+        delete_first: Whether to delete all dictionary keys from the HDF5 file first.
+    """
+    with h5py.File(path, 'r+') as hdf_file:  # Open existing file for read/write; error if it doesn't exist
+        if delete_first:
+            for key in dict_to_update.keys():
+                _delete_key_if_exists(hdf_file, key)
+        _recursively_save_dict(hdf_file, dict_to_update)
 
 
 def load_dict_from_hdf5(path, keys=None):

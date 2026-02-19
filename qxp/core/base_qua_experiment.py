@@ -13,7 +13,7 @@ from qxp.utils.database import current_cooldown
 from qxp.utils.instruments import initialize_instruments_from_config, turn_off_instruments_from_config
 from qxp.utils.qua import format_progress
 from qxp.utils.save import get_current_timestamp, get_experiment_params, get_latest_run_path, \
-    save_dict_to_hdf5, load_dict_from_hdf5, make_figure_save_path, \
+    save_dict_to_hdf5, update_dict_in_hdf5, load_dict_from_hdf5, make_figure_save_path, \
     make_debug_script_save_path, make_data_save_path, display_timestamp
 from qxp.utils.units import try_to_match_units
 from qxp.measurement_db.core.models import OpticalTable, ExperimentRun, Parameter, Measurement, Experiment
@@ -318,6 +318,11 @@ class BaseQuaExperiment(ABC):
         else:
             print("[!] No measured values to save to database. Is do_fit=True?")
 
+    def delete_measured_params_from_db(self):
+        """ Delete all measured parameters associated to this run from the database. """
+        experiment_run = ExperimentRun.objects.get(datetime=datetime.fromisoformat(self.start_time))
+        Measurement.objects.filter(experiment_run=experiment_run).delete()
+
     def run(self, simulate=False, do_fit=True, do_plot=True, do_save=True, validate='auto'):
         """ Run the experiment: set up, measure, analyze, plot and save.
         Args:
@@ -359,7 +364,11 @@ class BaseQuaExperiment(ABC):
         self.processed_data = self.process_data()
 
         if do_fit:
-            self.measured_db_params = self.fit()
+            try:
+                self.measured_db_params = self.fit()
+            except RuntimeError:
+                self.fit_params = {}  # ensure fit won't be plotted
+                print("[!] Fit failed.")
 
         plt.close()  # close the live plot if it still open
         if do_plot:
@@ -413,6 +422,49 @@ class BaseQuaExperiment(ABC):
         """
         self.configure(force_exp_config, force_instruments_config)
         self.run(simulate=simulate, do_fit=do_fit, do_plot=do_plot, do_save=do_save)
+
+    def refit(self, show_figure=True, do_update=False, validate='auto'):
+        """
+        Redo the fit on an experiment that was already run.
+        Args:
+            show_figure (bool): Whether to show the figure.
+            do_update (bool): Whether to update the saved data (HDF5, figure, and database) with the recomputed fit.
+            validate (str): Whether to validate the data. Can take 'yes', 'no' or 'auto' (default), which relies on the
+                `validate` method to determine if the measurements should be validated.
+        """
+        try:
+            self.measured_db_params = self.fit()
+        except RuntimeError:
+            self.fit_params = {}  # ensure fit won't be plotted
+            print("[!] Fit failed.")
+
+        self.plot()
+
+        if do_update:
+            fig_path = make_figure_save_path(self.identifier, self.start_time)
+            plt.gcf().savefig(fig_path)
+            print("[+] Saved figure at", fig_path)
+
+        if show_figure:
+            plt.show()
+        plt.close()
+
+        if do_update:
+            dict_to_update = {
+                'fit_params': self.fit_params,
+                'measured_db_params': self.measured_db_params,
+            }
+            update_dict_in_hdf5(dict_to_update, self.save_path, delete_first=True)
+            self.delete_measured_params_from_db()
+            match validate:
+                case 'yes':
+                    are_valid = True
+                case 'no':
+                    are_valid = False
+                case 'auto':
+                    are_valid = self.validate()
+            self.save_measured_params_to_db(are_valid)
+
 
     def __str__(self):
         return f'{self.identifier}__{display_timestamp(self.start_time)}'
