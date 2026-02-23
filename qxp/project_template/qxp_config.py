@@ -4,8 +4,7 @@ Replace it with your own!
 """
 
 from pathlib import Path
-from qualang_tools.units import unit
-u = unit()
+from qxp.utils.units import units as u
 
 from qxp.utils.waveforms import gaussian_shape
 

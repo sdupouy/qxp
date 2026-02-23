@@ -27,6 +27,7 @@ def display_timestamp(timestamp):
 
 def get_experiment_params(experiment):
     """ Get the experiment parameters as a dictionary.
+    We filter out private attributes, the processed_config/data fields, and callables.
     Args:
         experiment: Experiment object.
     """
@@ -181,7 +182,7 @@ def load_dict_from_hdf5(path, keys=None):
     """ Load dictionary from HDF5 file.
     Args:
         path: Path to HDF5 file.
-        keys: Keys to load. Load all keys if None (default).
+        keys: Keys to load. Load all keys if None (default). Nonexistent keys are silently skipped.
     """
     def _recursively_load_as_dict(hdf_group, keys=None):
         data_dict = {}

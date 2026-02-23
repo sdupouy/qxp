@@ -1,9 +1,13 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field, fields, is_dataclass
+from typing import ClassVar, Optional, Any
+import inspect
 from datetime import datetime
 import sys
 import threading
 
 import matplotlib.pyplot as plt
+import numpy as np
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
 from qualang_tools.plot import interrupt_on_close
 
@@ -21,6 +25,7 @@ from qxp.measurement_db.core.models import OpticalTable, ExperimentRun, Paramete
 plt.style.use(MPLSTYLE_PATH)
 
 
+@dataclass(eq=False, kw_only=True)
 class BaseQuaExperiment(ABC):
     """
     Base experiment class for a QUA experiment.
@@ -32,10 +37,14 @@ class BaseQuaExperiment(ABC):
     - get_qua_program()
     - get_data(result_handles)
     - fit()
-    - plot()
+    - initialize_plot()
+    - update_plot(updatables)
     The following methods can be optionally implemented in the inherited classes:
-    - live_plotting(): Manage the live-plotting loop that will be run in a separate thread during the
-        execution of the program.
+    - process_config()
+    - pre_run(qm)
+    - process_data()
+    - progress()
+    - validate()
     - manage_job_pauses(job, result_handles): Check when the job is paused, and decide what to do. Typical usage is to
         define outer instrument loops.
 
@@ -45,27 +54,50 @@ class BaseQuaExperiment(ABC):
     experiment.configure_and_run()
     ```
     """
-    identifier = 'abstract_base_qua_experiment'  # the name of the experiment, to be used as a unique identifier (e.g. to build file names)
-    display_name = 'Abstract base QUA experiment'  # the name of the experiment, to be printed
+    # Class metadata that must be redefined in subclasses
+    identifier: ClassVar[str] = ''  # the name of the experiment, to be used as a unique identifier (e.g. to build file names)
+    display_name: ClassVar[str] = ''  # the name of the experiment, to be printed
 
-    def __init__(self, comment=""):
-        """ Initialize the experiment.
-        Args:
-              comment: A comment that will be stored with the experiment run.
+    # Base fields (optional init parameters)
+    comment: str = field(default="", metadata={'qxp_base': True})
+
+    # Base fields (never init parameters)
+    start_time: Optional[str] = field(default=None, init=False, repr=False)  # set in self.run() - ISO format and tz-aware
+    end_time: Optional[str] = field(default=None, init=False, repr=False)  # set in self.run() - ISO format and tz-aware
+    exp_parameters: dict[str, Any] = field(default_factory=dict, init=False, repr=False)  # deep copy of the instantiation arguments, set in self.run()
+    exp_config: dict[str, Any] = field(default_factory=dict, init=False, repr=False)  # set in self.configure()
+    instruments_config: dict[str, Any] = field(default_factory=dict, init=False, repr=False)  # set in self.configure()
+    qua_config: dict[str, Any] = field(default_factory=dict, init=False, repr=False)  # set in self.configure()
+    processed_config: dict[str, Any] = field(default_factory=dict, init=False, repr=False)  # returned by self.process_config - NOT SAVED
+    pre_run_data: dict[str, Any] = field(default_factory=dict, init=False, repr=False)  # set in self._run_qua_program if self.pre_run is defined
+    data: dict[str, Any] = field(default_factory=dict, init=False, repr=False)  # returned by self.get_data()
+    processed_data: dict[str, Any] = field(default_factory=dict, init=False, repr=False)  # returned by self.process_data() - NOT SAVED
+    execution_report: Optional[str] = field(default=None, init=False, repr=False)  # QmJob.execution_report(), set after job ends
+    fit_params: dict[str, Any] = field(default_factory=dict, init=False, repr=False)  # set by self.fit(), typically popt
+    measured_db_params: dict[str, Any] = field(default_factory=dict, init=False, repr=False)  # returned by self.fit(), to be saved to database
+    save_path: Optional[str] = field(default=None, init=False, repr=False)  # set in self.save()
+
+    def __init_subclass__(cls, **kwargs):
+        """ Enforce definition of some class variables. """
+        super().__init_subclass__(**kwargs)
+
+        if not inspect.isabstract(cls):
+            if not cls.identifier:
+                raise TypeError(f"{cls.__qualname__} must define class attribute 'identifier: str'")
+            if not cls.display_name:
+                raise TypeError(f"{cls.__qualname__} must define class attribute 'display_name: str'")
+
+    @staticmethod
+    def _snapshot_value(v):
         """
-        self.comment = comment
-        self.start_time = None  # set in self.run() - ISO format and tz-aware
-        self.end_time = None  # set in self.run() - ISO format and tz-aware
-        self.exp_config = {}  # set in self.configure()
-        self.instruments_config = {}  # set in self.configure()
-        self.qua_config = {}  # set in self.configure()
-        self.processed_config = {}  # returned by self.process_config - NOT SAVED
-        self.pre_run_data = {}  # set in self.run_qua_program if self.pre_run if defined
-        self.data = {}  # returned by self.get_data()
-        self.processed_data = {}  # returned by self.process_data() - NOT SAVED
-        self.fit_params = {}  # set by self.fit(), typically popt
-        self.measured_db_params = {}  # returned by self.fit(), to be saved to database
-        self.save_path = None  # set in self.save()
+        Return a snapshot of a value.
+        Used to make `self.exp_parameters` reliable. Can be extended in a subclass if needed (for unusual types).
+        """
+        if isinstance(v, np.ndarray):
+            return v.copy()
+        if isinstance(v, (dict, list, tuple, set)):
+            return copy.deepcopy(v)
+        return v
 
     @abstractmethod
     def auto_set_exp_config(self):
@@ -150,7 +182,7 @@ class BaseQuaExperiment(ABC):
         updatables = self.initialize_plot()
         self.update_plot(updatables)
 
-    def live_plot(self, job):
+    def _live_plot(self, job):
         """ Do the live plotting. """
         print("[+] Starting live plotting.")
         updatables = self.initialize_plot()
@@ -174,13 +206,25 @@ class BaseQuaExperiment(ABC):
             # Wait for 5 seconds
             plt.pause(5)
 
+    def _capture_exp_parameters(self):
+        """
+        Capture user-defined experiment parameters (fields with init=True that are not marked 'qxp_base').
+        Stores snapshot into self.exp_parameters.
+        """
+        for f in fields(self):
+            if not f.init:
+                continue
+            if f.metadata.get("qxp_base", False):
+                continue
+            self.exp_parameters[f.name] = self._snapshot_value(getattr(self, f.name))
+
     def initialize_instruments(self):
         initialize_instruments_from_config(self.instruments_config)
 
     def turn_off_instruments(self):
         turn_off_instruments_from_config(self.instruments_config)
 
-    def run_qua_program(self, prog, simulate=False):
+    def _run_qua_program(self, prog, simulate=False):
         # Open Communication with the QOP
         qmm = QuantumMachinesManager(
             host=OPX_CONNECTION['host'],
@@ -323,7 +367,8 @@ class BaseQuaExperiment(ABC):
         experiment_run = ExperimentRun.objects.get(datetime=datetime.fromisoformat(self.start_time))
         Measurement.objects.filter(experiment_run=experiment_run).delete()
 
-    def run(self, simulate=False, do_fit=True, do_plot=True, do_save=True, validate='auto'):
+    def run(self, simulate=False, do_fit=True, do_plot=True, do_save=True, validate='auto',
+            print_execution_report=False):
         """ Run the experiment: set up, measure, analyze, plot and save.
         Args:
             simulate (bool): Simulate the QUA program instead of running it.
@@ -332,14 +377,17 @@ class BaseQuaExperiment(ABC):
             do_save (bool): Whether to save the data.
             validate (str): Whether to validate the data. Can take 'yes', 'no' or 'auto' (default), which relies on the
                 `validate` method to determine if the measurements should be validated.
+            print_execution_report (bool): Whether to print the QM job execution report after it is completed.
         """
+        self._capture_exp_parameters()
+
         print('[+] Running', self.identifier)
         self.start_time = get_current_timestamp()
         self.initialize_instruments()
 
         # prepare the main job
         prog = self.get_qua_program()
-        job = self.run_qua_program(prog, simulate)
+        job = self._run_qua_program(prog, simulate)
         if job is None:  # happens if simulate=True
             return
         result_handles = job.result_handles
@@ -352,7 +400,7 @@ class BaseQuaExperiment(ABC):
             print('[+] Starting job management thread')
             job_management_thread.start()
 
-        self.live_plot(job)
+        self._live_plot(job)
         print()  # newline after the progress bar
 
         if job_management_thread:
@@ -361,6 +409,9 @@ class BaseQuaExperiment(ABC):
         result_handles.wait_for_all_values()
         self.data = self.get_data(result_handles)
         self.end_time = get_current_timestamp()
+        self.execution_report = str(job.execution_report())
+        if print_execution_report:
+            print(self.execution_report)
         self.processed_data = self.process_data()
 
         if do_fit:
@@ -410,7 +461,8 @@ class BaseQuaExperiment(ABC):
         self.processed_config = self.process_config()  # does nothing unless redefined in child class
 
     def configure_and_run(self, force_exp_config=None, force_instruments_config=None,
-                          simulate=False, do_fit=True, do_plot=True, do_save=True):
+                          simulate=False, do_fit=True, do_plot=True, do_save=True, validate='auto',
+                          print_execution_report=False):
         """ Automatically configure and run the experiment.
         Args:
             force_exp_config (dict, optional): Dictionary to override values of the experiment config.
@@ -419,9 +471,15 @@ class BaseQuaExperiment(ABC):
             do_fit (bool): Whether to fit the data.
             do_plot (bool): Whether to plot the data.
             do_save (bool): Whether to save the data.
+            validate (str): Whether to validate the data. Can take 'yes', 'no' or 'auto' (default), which relies on the
+                `validate` method to determine if the measurements should be validated.
+            print_execution_report` (bool): Whether to print the QM job execution report after it is completed.
         """
         self.configure(force_exp_config, force_instruments_config)
-        self.run(simulate=simulate, do_fit=do_fit, do_plot=do_plot, do_save=do_save)
+        self.run(
+            simulate=simulate, do_fit=do_fit, do_plot=do_plot, do_save=do_save,
+            validate=validate, print_execution_report=print_execution_report
+        )
 
     def refit(self, show_figure=True, do_update=False, validate='auto'):
         """

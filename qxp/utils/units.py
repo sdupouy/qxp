@@ -2,7 +2,7 @@ import math
 import re
 
 
-class Unit:
+class _Units:
     """Units for use by QUA programs."""
     ns = 1
     us = 1_000
@@ -18,6 +18,14 @@ class Unit:
     mV = 1e-3
     uV = 1e-6
     nV = 1e-9
+
+    def __setattr__(self, name, value):
+        raise AttributeError("Units are read-only")
+
+    def __delattr__(self, name, value):
+        raise AttributeError("Units are read-only")
+
+units = _Units()
 
 
 def extract_unit_prefix(unit):

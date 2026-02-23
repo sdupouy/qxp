@@ -189,9 +189,22 @@ def exp_run_config(request, pk):
     """ Fetch the configuration of an experiment run from the saved HDF5 file. """
     entry = get_object_or_404(ExperimentRun, id=pk)
     try:
-        config_dict = load_dict_from_hdf5(entry.data_path, keys=['exp_config', 'instruments_config', 'qua_config'])
+        config_dict = load_dict_from_hdf5(
+            entry.data_path,
+            keys=['exp_parameters', 'exp_config', 'instruments_config', 'qua_config']
+        )
         config_dict = make_json_serializable(config_dict)  # convert numpy types to native python types
         return JsonResponse({"success": True, "config": config_dict})
+    except FileNotFoundError as e:
+        return JsonResponse({"success": False, "message": str(e)})
+
+
+def exp_run_code(request, pk):
+    """ Fetch the source code of an experiment run from the saved HDF5 file. """
+    entry = get_object_or_404(ExperimentRun, id=pk)
+    try:
+        code = load_dict_from_hdf5(entry.data_path, keys=['experiment_code'])['experiment_code']
+        return JsonResponse({"success": True, "code": code})
     except FileNotFoundError as e:
         return JsonResponse({"success": False, "message": str(e)})
 

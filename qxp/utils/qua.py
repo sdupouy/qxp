@@ -66,3 +66,27 @@ def format_progress(progress):
     """ Format a percentage into a progress bar. """
     bar = '=' * (round(progress) // 2) + ' ' * (50 - (round(progress) // 2))
     return f"Progress [{bar}] {progress:.1f}%"
+
+def demod2volts(data, duration, single_demod=False):
+    """ Converts the demodulated data to volts.
+    Args:
+        data (float or ndarray): demodulated data.
+        duration (int): demodulation duration in ns. This must be the duration of one slice in the case of `demod.sliced` and `demod.accumulated`.
+        single_demod (bool): Flag to add the additional factor of 2 needed for single demod.
+    Returns:
+        The demodulated data in volts.
+    """
+    if single_demod:
+        return 2 * 4096 * data / duration
+    else:
+        return 4096 * data / duration
+
+
+def raw2volts(data):
+    """ Converts the raw data to volts.
+    Args:
+        data (float or ndarray): raw data.
+    Returns:
+        The raw data in volts.
+    """
+    return data / 4096

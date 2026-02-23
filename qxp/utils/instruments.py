@@ -1,7 +1,6 @@
 import time
-from qualang_tools.units import unit
-u = unit()
 
+from qxp.utils.units import units as u
 from qxp.instruments.APUASYN20 import APUASYN20
 from qxp.instruments.ASPIN20G import ASPIN20G
 from qxp.instruments.BN103 import BN103

@@ -281,6 +281,43 @@
     });
   </script>
 
+  <h2>Experiment code</h2>
+  <button id="load-code" type="button" class="btn btn-primary mt-1"><i class="bi bi-braces me-2"></i>Load code</button>
+  <pre class="my-3"><code id="code-renderer" class="language-python"></code></pre>
+
+  <!-- Include Prism CSS and JS -->
+  <link rel="stylesheet" href="{% static 'core/prism/prism.css' %}">
+  <script src="{% static 'core/prism/prism.js' %}" data-manual></script>
+
+  <!-- Experiment code loading -->
+  <script>
+    $(document).ready(function() {
+      $('#load-code').on('click', function () {
+        const codeUrl = window.location.pathname + '/code';
+        $.ajax({
+          url: codeUrl,
+          method: 'GET',
+          dataType: 'json',
+          success: function(response) {
+            if (response.success) {
+              // Render code using Prism
+              $('#code-renderer').text(response.code);
+              Prism.highlightAll();
+              $('#load-code').hide();
+            } else {
+              // Show error message
+              $('#code-renderer').text(`Error: ${response.message || 'Unknown error'}`);
+            }
+          },
+          error: function(xhr, status, error) {
+            $('#code-renderer').text(`Error loading JSON: ${error}`);
+          }
+        });
+      });
+    });
+
+  </script>
+
   <script src="{% static 'core/js/get_cookie.js' %}"></script>
   <script src="{% static 'core/js/toggle_star_exp_run.js' %}"></script>
   <script src="{% static 'core/js/toggle_measurement_is_valid.js' %}"></script>
