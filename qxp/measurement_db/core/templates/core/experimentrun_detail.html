@@ -143,7 +143,7 @@
                 <a href="{% url 'chip-detail' object.cooldown.chip.identifier %}">{{ object.cooldown.chip.identifier }}</a>
               </h5>
               <div class="card-text mb-2">
-                <small class="text-body-secondary"><i class="bi bi-tools me-2"></i>Fabricated on {{ chip.fab_date }}</small>
+                <small class="text-body-secondary"><i class="bi bi-tools me-2"></i>Fabricated on {{ object.cooldown.chip.fab_date }}</small>
               </div>
               <p class="card-text">{{ object.cooldown.chip.comment|linebreaksbr }}</p>
             </div>

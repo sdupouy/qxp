@@ -1,4 +1,5 @@
-import os
+from pathlib import Path
+
 from django.db.models import Window, F
 from django.db.models.functions import RowNumber
 from django.views.generic import TemplateView, ListView, DetailView, CreateView, DeleteView
@@ -11,7 +12,7 @@ from django_filters.views import FilterView
 
 from qxp.utils.save import load_dict_from_hdf5, make_json_serializable, figure_path_from_data_path, \
     debug_script_path_from_data_path, delete_file
-from qxp.config import ALLOW_DELETE_EXPRUN
+from qxp.config import ALLOW_DELETE_EXPRUN, STORAGE_PATH
 from .models import Cooldown, ExperimentRun, Measurement, Parameter, Chip, OpticalTable, Experiment
 from .filters import ExperimentRunFilter, MeasurementFilter
 
@@ -195,8 +196,9 @@ def exp_run_config(request, pk):
     """ Fetch the configuration of an experiment run from the saved HDF5 file. """
     entry = get_object_or_404(ExperimentRun, id=pk)
     try:
+        path = Path(STORAGE_PATH) / entry.data_path
         config_dict = load_dict_from_hdf5(
-            entry.data_path,
+            path,
             keys=['exp_parameters', 'exp_config', 'instruments_config', 'qua_config']
         )
         config_dict = make_json_serializable(config_dict)  # convert numpy types to native python types
@@ -209,7 +211,8 @@ def exp_run_code(request, pk):
     """ Fetch the source code of an experiment run from the saved HDF5 file. """
     entry = get_object_or_404(ExperimentRun, id=pk)
     try:
-        code = load_dict_from_hdf5(entry.data_path, keys=['experiment_code'])['experiment_code']
+        path = Path(STORAGE_PATH) / entry.data_path
+        code = load_dict_from_hdf5(path, keys=['experiment_code'])['experiment_code']
         return JsonResponse({"success": True, "code": code})
     except FileNotFoundError as e:
         return JsonResponse({"success": False, "message": str(e)})
@@ -218,8 +221,9 @@ def exp_run_code(request, pk):
 def exp_run_figure(request, pk):
     """ Fetch the saved figure of an experiment run. """
     entry = get_object_or_404(ExperimentRun, id=pk)
-    image_path = figure_path_from_data_path(entry.data_path)
-    if not os.path.exists(image_path):
+    rel_image_path = figure_path_from_data_path(entry.data_path)
+    image_path = Path(STORAGE_PATH) / rel_image_path
+    if not image_path.exists():
         raise Http404(f"Image not found at path {image_path}")
     return FileResponse(open(image_path, 'rb'), content_type='image/png')
 
@@ -244,7 +248,7 @@ class ExperimentRunDeleteView(DeleteView):
             return HttpResponseForbidden("This object cannot be deleted because ALLOW_DELETE_EXPRUN is set to False in the config.")
 
         # Delete the data, debug script and figure
-        data_path = self.object.data_path
+        data_path = Path(STORAGE_PATH) / self.object.data_path
         debug_script_path = debug_script_path_from_data_path(data_path)
         figure_path = figure_path_from_data_path(data_path)
         delete_file(data_path)

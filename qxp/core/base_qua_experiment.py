@@ -5,6 +5,7 @@ import inspect
 from datetime import datetime
 import sys
 import threading
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +14,7 @@ from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
 from qualang_tools.plot import interrupt_on_close
 
 from qxp.config import EXP_CONFIG, get_qua_config, OPX_CONNECTION, INSTRUMENTS_CONFIG, MPLSTYLE_PATH, FORCE_EXP_CONFIG, \
-    FORCE_INSTRUMENTS_CONFIG
+    FORCE_INSTRUMENTS_CONFIG, STORAGE_PATH
 from qxp.utils.config import update_nested_dict
 from qxp.utils.database import current_cooldown
 from qxp.utils.instruments import initialize_instruments_from_config, turn_off_instruments_from_config
@@ -76,7 +77,7 @@ class BaseQuaExperiment(ABC):
     execution_report: Optional[str] = field(default=None, init=False, repr=False)  # QmJob.execution_report(), set after job ends
     fit_params: dict[str, Any] = field(default_factory=dict, init=False, repr=False)  # set by self.fit(), typically popt
     measured_db_params: dict[str, Any] = field(default_factory=dict, init=False, repr=False)  # returned by self.fit(), to be saved to database
-    save_path: Optional[str] = field(default=None, init=False, repr=False)  # set in self.save()
+    save_path: Optional[str] = field(default=None, init=False, repr=False)  # relative to storage path, set in self.save()
 
     def __init_subclass__(cls, **kwargs):
         """ Enforce definition of some class variables. """
@@ -282,7 +283,8 @@ class BaseQuaExperiment(ABC):
 
     def save(self):
         """ Save the experiment parameters and data in the HDF5 format. """
-        self.save_path = make_data_save_path(self.identifier, self.start_time)
+        self._abs_save_path = make_data_save_path(self.identifier, self.start_time)
+        self.save_path = str(Path(self._abs_save_path).relative_to(STORAGE_PATH))  # relative
         dict_to_save = get_experiment_params(self)
 
         # Save the code of the experiment module
@@ -292,13 +294,14 @@ class BaseQuaExperiment(ABC):
             experiment_code = f.read()
         dict_to_save['experiment_code'] = experiment_code
 
-        save_dict_to_hdf5(dict_to_save, self.save_path)
-        print('[+] Saved experiment to', self.save_path)
+        save_dict_to_hdf5(dict_to_save, self._abs_save_path)
+        print('[+] Saved experiment to', self._abs_save_path)
 
     def load(self, path=None, process_config=True, process_data=True):
         """ Load saved data.
         Args:
-            path (optional): The path to the hdf5 file. If None, the latest run will be loaded.
+            path (optional): The path to the hdf5 file. If None, the latest run will be loaded. Can be absolute or
+                relative to the storage path.
             process_config (optional): Whether to process the configuration upon loading.
             process_data (optional): Whether to process the data upon loading.
         Returns:
@@ -306,6 +309,11 @@ class BaseQuaExperiment(ABC):
         """
         if path is None:
             path = get_latest_run_path(self.identifier)
+        path = Path(path)
+        if not path.is_absolute():
+            path = Path(STORAGE_PATH) / path
+        if not path.exists():
+            raise FileNotFoundError(f'Path {path} does not exist.')
 
         data_dict = load_dict_from_hdf5(path)
         for key, value in data_dict.items():
@@ -315,6 +323,7 @@ class BaseQuaExperiment(ABC):
             self.processed_config = self.process_config()
         if process_data:
             self.processed_data = self.process_data()
+        self._abs_save_path = str(path)
         return self  # so we can do `exp = ExpClass.load()`
 
     def log_experiment_run_to_db(self):
@@ -544,8 +553,8 @@ class BaseQuaExperiment(ABC):
                 'fit_params': self.fit_params,
                 'measured_db_params': self.measured_db_params,
             }
-            update_dict_in_hdf5(dict_to_update, self.save_path, delete_first=True)
-            print("[+] Updated saved data in", self.save_path,)
+            update_dict_in_hdf5(dict_to_update, self._abs_save_path, delete_first=True)
+            print("[+] Updated saved data in", self._abs_save_path)
             self.delete_measured_params_from_db()
             match validate:
                 case 'yes':
