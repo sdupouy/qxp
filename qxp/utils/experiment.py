@@ -10,7 +10,7 @@ def copy_default(v):
         delays: np.ndarray = copy_default([0, 20e-9, 40e-9])
     """
     if isinstance(v, np.ndarray):
-        return field(default_factory=lambda: arr.copy())
+        return field(default_factory=lambda: v.copy())
     if isinstance(v, (dict, list, tuple, set)):
-        return field(default_factory=lambda: copy.deepcopy(d))
+        return field(default_factory=lambda: copy.deepcopy(v))
     return field(default=v)

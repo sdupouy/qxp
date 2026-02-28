@@ -14,6 +14,13 @@
         <dt>Fabricated on</dt>
         <dd>{{ object.fab_date }}</dd>
 
+        <dt>Stats</dt>
+        <dd>
+          {{ latest_measurements|length }} measured parameter{{ latest_measurements|length|pluralize }}
+          in {{ exp_run_count }} experiment run{{ exp_run_count|pluralize }},
+          over {{ object.cooldown_set.count }} cooldown{{ object.cooldown_set.count|pluralize }}
+        </dd>
+
         <dt class="d-flex align-items-center">
           Comment
           {% if object.comment %}
@@ -21,7 +28,7 @@
           {% endif %}
         </dt>
         <dd>
-          <span id="comment-text">{{ object.comment }}</span>
+          <span id="comment-text">{{ object.comment|linebreaksbr }}</span>
           <form method="post" id="comment-form" class="mt-2 mb-3 no-labels {% if object.comment %}d-none{% endif %}">
             {% csrf_token %}
             {{ form|crispy }}
@@ -96,7 +103,7 @@
                     <br><small class="text-body-secondary"><i class="bi bi-fire me-2"></i>{{ cooldown.warmup_datetime }}</small>
                   {% endif %}
                 </div>
-                <p class="card-text">{{ cooldown.comment }}</p>
+                <p class="card-text">{{ cooldown.comment|linebreaksbr }}</p>
                 <a href="{% url 'cooldown-detail' cooldown.id %}" class="stretched-link"></a>
               </div>
             </div>

@@ -6,24 +6,38 @@ from qxp.instruments.ASPIN20G import ASPIN20G
 from qxp.instruments.BN103 import BN103
 
 
-def initialize_apuasyn20(config):
+def initialize_apuasyn20(config, print_result=True):
     instrument = APUASYN20(visa_address=config['address'])
     instrument.set_frequency_hz(channel=config['channel'], frequency_hz=config['frequency'])
     instrument.set_power_dbm(channel=config['channel'], power_dbm=float(config['power']))
     instrument.set_output(channel=config['channel'], output=bool(config['output']))
+    if print_result:
+        if instrument.get_output(channel=config['channel']):
+            print("    Output ON")
+            print(f"    Power {instrument.get_power_dbm(channel=config['channel'])} dBm")
+            print(f"    Frequency {instrument.get_frequency_hz(channel=config['channel'])} Hz")
+        else:
+            print("    Output OFF")
     instrument.close()
 
 
-def initialize_aspin20(config):
+def initialize_aspin20(config, print_result=True):
     instrument = ASPIN20G(visa_address=config['address'])
     instrument.set_frequency_hz(frequency_hz=config['frequency'])
     instrument.set_power_dbm(power_dbm=float(config['power']))
     instrument.set_output(output=bool(config['output']))
+    if print_result:
+        if instrument.get_output():
+            print("    Output ON")
+            print(f"    Power {instrument.get_power_dbm()} dBm")
+            print(f"    Frequency {instrument.get_frequency_hz()} Hz")
+        else:
+            print("    Output OFF")
     instrument.close()
 
 
 # TODO implement voltage safety check
-def initialize_bn103(config):
+def initialize_bn103(config, print_result=True):
     instrument = BN103(ip=config['address'])
     instrument.set_output(
         module=config['module'],
@@ -37,7 +51,8 @@ def initialize_bn103(config):
         step_duration_ms=config['step_duration'] / u.ms,
         step_height_v=config['step_height']
     ) * u.ms
-    print(f"[+] Voltage ramping to {config['voltage']}V in {ramp_duration / u.s}s")
+    if print_result:
+        print(f"    Voltage ramping to {config['voltage']}V in {ramp_duration / u.s}s")
     time.sleep(ramp_duration / u.s)
     instrument.close()
 

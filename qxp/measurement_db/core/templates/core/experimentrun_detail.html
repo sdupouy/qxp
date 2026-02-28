@@ -57,7 +57,7 @@
           {% endif %}
         </dt>
         <dd>
-          <span id="comment-text">{{ object.comment }}</span>
+          <span id="comment-text">{{ object.comment|linebreaksbr }}</span>
           <form method="post" id="comment-form" class="mt-2 mb-3 no-labels {% if object.comment %}d-none{% endif %}">
             {% csrf_token %}
             {{ form|crispy }}
@@ -145,7 +145,7 @@
               <div class="card-text mb-2">
                 <small class="text-body-secondary"><i class="bi bi-tools me-2"></i>Fabricated on {{ chip.fab_date }}</small>
               </div>
-              <p class="card-text">{{ object.cooldown.chip.comment }}</p>
+              <p class="card-text">{{ object.cooldown.chip.comment|linebreaksbr }}</p>
             </div>
           </div>
         </div>
@@ -172,7 +172,7 @@
                   <br><small class="text-body-secondary"><i class="bi bi-fire me-2"></i>{{ object.cooldown.warmup_datetime }}</small>
                 {% endif %}
               </div>
-              <p class="card-text">{{ object.cooldown.comment }}</p>
+              <p class="card-text">{{ object.cooldown.comment|linebreaksbr }}</p>
             </div>
           </div>
         </div>
@@ -191,7 +191,7 @@
           <div class="col-sm-8">
             <div class="card-body">
               <h5 class="card-title">Rack {{ object.optical_table.rack_name }}</h5>
-              <p class="card-text">{{ object.optical_table.comment }}</p>
+              <p class="card-text">{{ object.optical_table.comment|linebreaksbr }}</p>
             </div>
           </div>
         </div>

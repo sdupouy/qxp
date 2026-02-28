@@ -23,7 +23,7 @@ def iq_imbalance_k_theta(k, theta):
     return tuple(np.around(np.matmul(c, r), 6).flatten())
 
 
-def ns2cycle(t):
+def ns2cycles(t):
     """ Convert time in ns to a number of FPGA cycles (4 ns). """
     return t // 4
 
@@ -61,11 +61,6 @@ def truncate_to_smallest(arrays):
     min_length = min([len(a) for a in arrays])
     return [a[:min_length] for a in arrays]
 
-
-def format_progress(progress):
-    """ Format a percentage into a progress bar. """
-    bar = '=' * (round(progress) // 2) + ' ' * (50 - (round(progress) // 2))
-    return f"Progress [{bar}] {progress:.1f}%"
 
 def demod2volts(data, duration, single_demod=False):
     """ Converts the demodulated data to volts.

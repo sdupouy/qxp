@@ -54,7 +54,10 @@ class CooldownDetailView(DetailView, ModelFormMixin):
         ).filter(
             row_number=1
         ).select_related('parameter', 'experiment_run').order_by('parameter')
+        # Number of experiment runs
+        exp_run_count = ExperimentRun.objects.filter(cooldown=self.get_object()).count()
         context['latest_measurements'] = latest_measurements
+        context['exp_run_count'] = exp_run_count
         return context
 
     def get_form(self, *args, **kwargs):
@@ -116,7 +119,10 @@ class ChipDetailView(DetailView, ModelFormMixin):
         ).filter(
             row_number=1
         ).select_related('parameter', 'experiment_run').order_by('parameter')
+        # Number of experiment runs
+        exp_run_count = ExperimentRun.objects.filter(cooldown__chip=self.get_object()).count()
         context['latest_measurements'] = latest_measurements
+        context['exp_run_count'] = exp_run_count
         return context
 
     def get_form(self, *args, **kwargs):

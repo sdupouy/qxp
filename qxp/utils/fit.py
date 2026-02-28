@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import minimize
+from scipy import linalg
 
 
 """ Fitting functions """
@@ -7,13 +8,17 @@ from scipy.optimize import minimize
 def fit_cosine(t, amplitude, period, phase, offset):
     return amplitude * np.cos(2 * np.pi * t / period + phase) + offset
 
-
 def fit_decaying_cosine(t, amplitude, period, tau, phase, offset):
-    return amplitude * np.cos(2 * np.pi * t / period + phase) * np.exp(-t/ tau) + offset
-
+    return amplitude * np.cos(2 * np.pi * t / period + phase) * np.exp(-t / tau) + offset
 
 def fit_exponential(t, a, tau, offset):
     return a * np.exp(-t / tau) + offset
+
+def fit_lorentzian(t, amplitude, center, width, offset):
+    return amplitude / (1 + ((t - center) / width) ** 2) + offset
+
+def fit_gaussian(t, amplitude, center, sigma, offset):
+    return amplitude * np.exp(-(t - center) ** 2 / (2 * sigma ** 2)) + offset
 
 
 """ Cost functions """
@@ -64,3 +69,23 @@ def threshold_g_e_blobs(g, e):
     e_knowing_e = np.sum(e_proj > threshold) / len(e_proj)
     fidelity = 100 * (g_knowing_g + e_knowing_e) / 2
     return g_proj, e_proj, angle, threshold, fidelity
+
+def iq_rot_angle(data):
+    """ Find the angle by which the IQ data is rotated. """
+    data = data.flatten()
+    i, q = np.real(data), np.imag(data)
+    cov = np.cov(i, q)
+    a = linalg.eig(cov)
+    eigvecs = a[1]
+    if a[0][1] > a[0][0]:
+        eigvec = eigvecs[:, 0]
+    else:
+        eigvec = eigvecs[:, 1]
+    theta = np.arctan(eigvec[0] / eigvec[1])
+    return theta
+
+def iq_rot(data, angle=None):
+    """ Rotate the IQ data to make it horizontal. """
+    if angle is None:
+        angle = iq_rot_angle(data)
+    return data * np.exp(1j * angle)

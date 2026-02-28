@@ -16,6 +16,7 @@
           <th scope="col">Date</th>
           <th scope="col">Name</th>
           <th scope="col">Value</th>
+          <th scope="col">Experiment</th>
           <th scope="col">Chip</th>
           <th scope="col">Cooldown</th>
         </tr>
@@ -26,6 +27,7 @@
           <td>{{ measurement.experiment_run.datetime }}</td>
           <td><a href="{% url 'parameter-detail' measurement.parameter.identifier %}">{{ measurement.parameter.display_name_or_identifier }}</a></td>
           <td>{{ measurement.value_uncertainty_unit }}</td>
+          <td><a href="{% url 'experiment-detail' measurement.experiment_run.experiment.identifier %}">{{ measurement.experiment_run.experiment }}</a></td>
           <td><a href="{% url 'chip-detail' measurement.experiment_run.cooldown.chip.identifier %}">{{ measurement.experiment_run.cooldown.chip }}</a></td>
           <td>{{ measurement.experiment_run.cooldown.number }}</td>
         </tr>

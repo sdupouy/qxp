@@ -1,4 +1,5 @@
 {% extends 'core/base.html' %}
+{% load custom_filters %}
 
 {% block content %}
   <h1>{{ object.display_name }}</h1>
@@ -27,6 +28,7 @@
           <th scope="col">Date</th>
           <th scope="col">Chip</th>
           <th scope="col">Cooldown</th>
+          <th scope="col">Duration</th>
         </tr>
       </thead>
       <tbody>
@@ -42,6 +44,7 @@
           <td>{{ exp_run.datetime }}</td>
           <td><a href="{% url 'chip-detail' exp_run.cooldown.chip.identifier %}">{{ exp_run.cooldown.chip.identifier }}</a></td>
           <td>{{ exp_run.cooldown.number }}</td>
+          <td>{{ exp_run.duration|format_timedelta }}</td>
         </tr>
       {% endfor %}
       </tbody>

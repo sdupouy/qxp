@@ -24,7 +24,7 @@
                 <div class="card-text mb-2">
                   <small class="text-body-secondary"><i class="bi bi-tools me-2"></i>Fabricated on {{ chip.fab_date }}</small>
                 </div>
-                <p class="card-text">{{ chip.comment }}</p>
+                <p class="card-text">{{ chip.comment|linebreaksbr }}</p>
               </div>
             </div>
           </div>
@@ -62,7 +62,7 @@
                       <br><small class="text-body-secondary"><i class="bi bi-fire me-2"></i>{{ cooldown.warmup_datetime }}</small>
                     {% endif %}
                   </div>
-                  <p class="card-text">{{ cooldown.comment }}</p>
+                  <p class="card-text">{{ cooldown.comment|linebreaksbr }}</p>
                 </div>
               </div>
             </div>
@@ -93,7 +93,7 @@
                   <div class="card-text mb-2">
                     <small class="text-body-secondary">Since {{ optical_table.datetime }}</small>
                   </div>
-                  <p class="card-text">{{ optical_table.comment }}</p>
+                  <p class="card-text">{{ optical_table.comment|linebreaksbr }}</p>
                 </div>
               </div>
             </div>

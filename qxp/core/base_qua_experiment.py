@@ -8,14 +8,15 @@ import threading
 
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm.auto import tqdm
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
 from qualang_tools.plot import interrupt_on_close
 
-from qxp.config import EXP_CONFIG, get_qua_config, OPX_CONNECTION, INSTRUMENTS_CONFIG, MPLSTYLE_PATH
+from qxp.config import EXP_CONFIG, get_qua_config, OPX_CONNECTION, INSTRUMENTS_CONFIG, MPLSTYLE_PATH, FORCE_EXP_CONFIG, \
+    FORCE_INSTRUMENTS_CONFIG
 from qxp.utils.config import update_nested_dict
 from qxp.utils.database import current_cooldown
 from qxp.utils.instruments import initialize_instruments_from_config, turn_off_instruments_from_config
-from qxp.utils.qua import format_progress
 from qxp.utils.save import get_current_timestamp, get_experiment_params, get_latest_run_path, \
     save_dict_to_hdf5, update_dict_in_hdf5, load_dict_from_hdf5, make_figure_save_path, \
     make_debug_script_save_path, make_data_save_path, display_timestamp
@@ -192,19 +193,44 @@ class BaseQuaExperiment(ABC):
         for v in job.result_handles.values():
             v.wait_for_values(1)
 
+        self.data = self.get_data(job.result_handles)  # must be called before self.progress()
+        self.processed_data = self.process_data()
+        self.update_plot(updatables)
+
+        # Initialize the progress bar
+        pbar = None
+        prev_progress = self.progress()
+        if prev_progress is not None:
+            pbar = tqdm(
+                total=100,
+                bar_format="Progress: |{bar}| {percentage:3.1f}% [{elapsed}<{remaining}]",
+                dynamic_ncols=True,
+                initial=prev_progress,
+            )
+
+        plt.pause(3)
+
         # Live plotting loop
         while job.result_handles.is_processing():
+            # Fetch and update
             self.data = self.get_data(job.result_handles)
             self.processed_data = self.process_data()
             self.update_plot(updatables)
 
             # Show the progress bar
-            progress = self.progress()
-            if progress is not None:
-                print('\r' + format_progress(progress), end='')
+            if pbar is not None:
+                progress = self.progress()
+                progress_delta = progress - prev_progress
+                if progress_delta > 0:
+                    pbar.update(progress_delta)
+                    prev_progress = progress
 
-            # Wait for 5 seconds
-            plt.pause(5)
+            # Wait for 3 seconds
+            plt.pause(3)
+
+        if pbar is not None:
+            pbar.update(100 - pbar.n)  # mark the progress complete before closing
+            pbar.close()
 
     def _capture_exp_parameters(self):
         """
@@ -380,10 +406,13 @@ class BaseQuaExperiment(ABC):
             print_execution_report (bool): Whether to print the QM job execution report after it is completed.
         """
         self._capture_exp_parameters()
-
-        print('[+] Running', self.identifier)
         self.start_time = get_current_timestamp()
-        self.initialize_instruments()
+
+        if simulate:
+            print('[+] Simulating', self.identifier)
+        else:
+            print('[+] Running', self.identifier)
+            self.initialize_instruments()
 
         # prepare the main job
         prog = self.get_qua_program()
@@ -401,7 +430,6 @@ class BaseQuaExperiment(ABC):
             job_management_thread.start()
 
         self._live_plot(job)
-        print()  # newline after the progress bar
 
         if job_management_thread:
             job_management_thread.join()  # wait for the thread to terminate (normally when the job finished processing)
@@ -417,9 +445,9 @@ class BaseQuaExperiment(ABC):
         if do_fit:
             try:
                 self.measured_db_params = self.fit()
-            except RuntimeError:
+            except Exception as e:
                 self.fit_params = {}  # ensure fit won't be plotted
-                print("[!] Fit failed.")
+                print("[!] Fit failed:", e)
 
         plt.close()  # close the live plot if it still open
         if do_plot:
@@ -452,11 +480,15 @@ class BaseQuaExperiment(ABC):
         self.exp_config = EXP_CONFIG.copy()  # important to copy so that the original config dict doesn't get modified
         self.instruments_config = INSTRUMENTS_CONFIG.copy()  # important to copy so that the original config dict doesn't get modified
         self.auto_set_exp_config()
+        if FORCE_EXP_CONFIG is not None:
+            update_nested_dict(self.exp_config, FORCE_EXP_CONFIG)  # first override from config
         if force_exp_config is not None:
-            update_nested_dict(self.exp_config, force_exp_config)
+            update_nested_dict(self.exp_config, force_exp_config)  # then from run kwargs
         self.auto_set_instruments_config()
+        if FORCE_INSTRUMENTS_CONFIG is not None:
+            update_nested_dict(self.instruments_config, FORCE_INSTRUMENTS_CONFIG)  # first override from config
         if force_instruments_config is not None:
-            update_nested_dict(self.instruments_config, force_instruments_config)
+            update_nested_dict(self.instruments_config, force_instruments_config)  # then from run kwargs
         self.qua_config = get_qua_config(self.exp_config, self.instruments_config)
         self.processed_config = self.process_config()  # does nothing unless redefined in child class
 
@@ -492,9 +524,9 @@ class BaseQuaExperiment(ABC):
         """
         try:
             self.measured_db_params = self.fit()
-        except RuntimeError:
+        except RuntimeError as e:
             self.fit_params = {}  # ensure fit won't be plotted
-            print("[!] Fit failed.")
+            print("[!] Fit failed:", e)
 
         self.plot()
 
@@ -513,6 +545,7 @@ class BaseQuaExperiment(ABC):
                 'measured_db_params': self.measured_db_params,
             }
             update_dict_in_hdf5(dict_to_update, self.save_path, delete_first=True)
+            print("[+] Updated saved data in", self.save_path,)
             self.delete_measured_params_from_db()
             match validate:
                 case 'yes':
