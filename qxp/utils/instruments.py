@@ -38,6 +38,10 @@ def initialize_aspin20(config, print_result=True):
 
 # TODO implement voltage safety check
 def initialize_bn103(config, print_result=True):
+    if not config["output"]:
+        turn_off_bn103(config)
+        return
+
     instrument = BN103(ip=config['address'])
     instrument.set_output(
         module=config['module'],
@@ -83,7 +87,7 @@ def turn_off_bn103(config):
         channel=config['channel'],
         state='off'
     )
-    print(f"[+] Voltage ramping to {config['voltage']}V in {ramp_duration / u.s}s")
+    print(f"[+] Voltage ramping to 0V in {ramp_duration / u.s}s, turning output OFF")
     time.sleep(ramp_duration / u.s)
     instrument.close()
 

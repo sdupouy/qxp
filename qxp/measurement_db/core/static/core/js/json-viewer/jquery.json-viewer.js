@@ -1,7 +1,7 @@
 /**
  * jQuery json-viewer
- * @author: Alexandre Bodelot <alexandre.bodelot@gmail.com>
- * @link: https://github.com/abodelot/jquery.json-viewer
+ * @author: Alexandre Bodelot <alexandre.bodelot@gmail.com>, forked by Simon Dupouy
+ * @link: https://github.com/sdupouy/jquery.json-viewer
  */
 (function($) {
 
@@ -41,10 +41,122 @@
   }
 
   /**
+   * Check if the value should be rendered as a big number literal
+   * @return boolean
+   */
+  function isBigNumber(value, options) {
+    return options.bigNumbers && value &&
+      (typeof value.toExponential === 'function' || value.isLosslessNumber);
+  }
+
+  /**
+   * Return the html for a copy button
+   * @return string
+   */
+  function getCopyButton(path, options) {
+    if (!options.copyToClipboard) {
+      return '';
+    }
+
+    return ' <a href class="json-copy" data-path=\'' +
+      htmlEscape(JSON.stringify(path)) + '\' title="Copy">&#x29C9;</a>';
+  }
+
+  /**
+   * Resolve a path against the input json object
+   * @return any
+   */
+  function getJsonValue(json, path) {
+    for (var i = 0; i < path.length; ++i) {
+      json = json[path[i]];
+    }
+    return json;
+  }
+
+  /**
+   * Stringify json values while preserving displayed bigints and big numbers
+   * @return string|undefined
+   */
+  function stringifyJsonValue(value, indentation, options) {
+    return JSON.stringify(value, function(key, currentValue) {
+      if (typeof currentValue === 'bigint') {
+        return currentValue.toString();
+      }
+      if (isBigNumber(currentValue, options)) {
+        return currentValue.toString();
+      }
+      return currentValue;
+    }, indentation);
+  }
+
+  /**
+   * Format a value for the clipboard
+   * @return string|undefined
+   */
+  function getClipboardValue(value, options) {
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (typeof value === 'number') {
+      return String(value);
+    }
+    if (typeof value === 'bigint') {
+      return value.toString();
+    }
+    if (typeof value === 'boolean') {
+      return String(value);
+    }
+    if (value === null) {
+      return 'null';
+    }
+    if (value instanceof Array) {
+      return stringifyJsonValue(value, 0, options);
+    }
+    if (typeof value === 'object') {
+      if (isBigNumber(value, options)) {
+        return value.toString();
+      }
+      return stringifyJsonValue(value, 2, options);
+    }
+    return undefined;
+  }
+
+  /**
+   * Copy a string to the clipboard
+   * @return boolean|Promise<boolean>
+   */
+  function copyText(text) {
+    if (navigator.clipboard &&
+        typeof navigator.clipboard.writeText === 'function') {
+      return navigator.clipboard.writeText(text).then(function() {
+        return true;
+      }, function() {
+        return false;
+      });
+    }
+
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    var success = false;
+    try {
+      success = document.execCommand('copy');
+    } catch (error) {
+      success = false;
+    }
+    document.body.removeChild(textarea);
+    return success;
+  }
+
+  /**
    * Transform a json object into html representation
    * @return string
    */
-  function json2html(json, options) {
+  function json2html(json, options, path) {
     var html = '';
     if (typeof json === 'string') {
       // Escape tags and quotes
@@ -67,16 +179,18 @@
       if (json.length > 0) {
         html += '[<ol class="json-array">';
         for (var i = 0; i < json.length; ++i) {
+          var itemPath = path.concat(i);
           html += '<li>';
           // Add toggle button if item is collapsable
           if (isCollapsable(json[i])) {
             html += '<a href class="json-toggle"></a>';
           }
-          html += json2html(json[i], options);
+          html += json2html(json[i], options, itemPath);
           // Add comma if item is not last
           if (i < json.length - 1) {
             html += ',';
           }
+          html += getCopyButton(itemPath, options);
           html += '</li>';
         }
         html += '</ol>]';
@@ -87,7 +201,7 @@
       // Optional support different libraries for big numbers
       // json.isLosslessNumber: package lossless-json
       // json.toExponential(): packages bignumber.js, big.js, decimal.js, decimal.js-light, others?
-      if (options.bigNumbers && (typeof json.toExponential === 'function' || json.isLosslessNumber)) {
+      if (isBigNumber(json, options)) {
         html += '<span class="json-literal">' + json.toString() + '</span>';
       } else {
         var keyCount = Object.keys(json).length;
@@ -95,11 +209,13 @@
           html += '{<ul class="json-dict">';
           for (var key in json) {
             if (Object.prototype.hasOwnProperty.call(json, key)) {
+              var keyPath = path.concat(key);
               // define a parameter of the json value first to prevent get null from key when the key changed by the function `htmlEscape(key)`
-              let jsonElement = json[key];
-              key = htmlEscape(key);
-              var keyRepr = options.withQuotes ?
-                '<span class="json-string">"' + key + '"</span>' : key;
+              var jsonElement = json[key];
+              var escapedKey = htmlEscape(key);
+              var keyRepr = options.withQuotes
+                ? '<span class="json-string">"' + escapedKey + '"</span>'
+                : escapedKey;
 
               html += '<li>';
               // Add toggle button if item is collapsable
@@ -108,11 +224,12 @@
               } else {
                 html += keyRepr;
               }
-              html += ': ' + json2html(jsonElement, options);
+              html += ': ' + json2html(jsonElement, options, keyPath);
               // Add comma if item is not last
               if (--keyCount > 0) {
                 html += ',';
               }
+              html += getCopyButton(keyPath, options);
               html += '</li>';
             }
           }
@@ -137,26 +254,31 @@
       rootCollapsable: true,
       withQuotes: false,
       withLinks: true,
-      bigNumbers: false
+      bigNumbers: false,
+      copyToClipboard: false
     }, options);
 
     // jQuery chaining
     return this.each(function() {
+      var root = $(this);
 
       // Transform to HTML
-      var html = json2html(json, options);
+      var html = json2html(json, options, []);
+      html += getCopyButton([], options);
       if (options.rootCollapsable && isCollapsable(json)) {
         html = '<a href class="json-toggle"></a>' + html;
       }
 
       // Insert HTML in target DOM element
-      $(this).html(html);
-      $(this).addClass('json-document');
+      root.html(html);
+      root.addClass('json-document');
+      root.data('json', json);
 
       // Bind click on toggle buttons
-      $(this).off('click');
-      $(this).on('click', 'a.json-toggle', function() {
-        var target = $(this).toggleClass('collapsed').siblings('ul.json-dict, ol.json-array');
+      root.off('click');
+      root.on('click', 'a.json-toggle', function() {
+        var target = $(this).toggleClass('collapsed')
+          .siblings('ul.json-dict, ol.json-array');
         target.toggle();
         if (target.is(':visible')) {
           target.siblings('.json-placeholder').remove();
@@ -169,14 +291,25 @@
       });
 
       // Simulate click on toggle button when placeholder is clicked
-      $(this).on('click', 'a.json-placeholder', function() {
+      root.on('click', 'a.json-placeholder', function() {
         $(this).siblings('a.json-toggle').click();
+        return false;
+      });
+
+      // Copy a node value to the clipboard
+      root.on('click', 'a.json-copy', function() {
+        var path = JSON.parse($(this).attr('data-path'));
+        var value = getJsonValue(root.data('json'), path);
+        var text = getClipboardValue(value, options);
+        if (text !== undefined) {
+          copyText(text);
+        }
         return false;
       });
 
       if (options.collapsed == true) {
         // Trigger click to collapse all nodes
-        $(this).find('a.json-toggle').click();
+        root.find('a.json-toggle').click();
       }
     });
   };

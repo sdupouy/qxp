@@ -17,6 +17,16 @@ def fit_exponential(t, a, tau, offset):
 def fit_lorentzian(t, amplitude, center, width, offset):
     return amplitude / (1 + ((t - center) / width) ** 2) + offset
 
+def make_fit_n_lorentzians(n):
+    def fit_n_lorentzians(t, center_peak1, width, offset, spacing, *amps):
+        if len(amps) != n:
+            raise ValueError(f"Expected {n} amplitudes, got {len(amps)}")
+        y = np.zeros_like(t) + offset
+        for i in range(n):
+            y += fit_lorentzian(t, amps[i], center_peak1 + i * spacing, width, 0)
+        return y
+    return fit_n_lorentzians
+
 def fit_gaussian(t, amplitude, center, sigma, offset):
     return amplitude * np.exp(-(t - center) ** 2 / (2 * sigma ** 2)) + offset
 

@@ -265,7 +265,8 @@
               $('#config-json-renderer').jsonViewer(response.config, {
                 collapsed: true,
                 rootCollapsable: false,
-                withLinks: false
+                withLinks: false,
+                copyToClipboard: true,
               });
               $('#load-config').hide();
             } else {
