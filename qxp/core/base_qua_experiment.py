@@ -20,7 +20,7 @@ from qxp.utils.database import current_cooldown
 from qxp.utils.instruments import initialize_instruments_from_config, turn_off_instruments_from_config
 from qxp.utils.save import get_current_timestamp, get_experiment_params, get_latest_run_path, \
     save_dict_to_hdf5, update_dict_in_hdf5, load_dict_from_hdf5, make_figure_save_path, \
-    make_debug_script_save_path, make_data_save_path, display_timestamp
+    make_debug_script_save_path, make_data_save_path, display_timestamp, storage_path_from_db
 from qxp.utils.units import try_to_match_units
 from qxp.measurement_db.core.models import OpticalTable, ExperimentRun, Parameter, Measurement, Experiment
 
@@ -311,7 +311,7 @@ class BaseQuaExperiment(ABC):
             path = get_latest_run_path(self.identifier)
         path = Path(path)
         if not path.is_absolute():
-            path = Path(STORAGE_PATH) / path
+            path = storage_path_from_db(path)
         if not path.exists():
             raise FileNotFoundError(f'Path {path} does not exist.')
 
