@@ -3,7 +3,7 @@ from datetime import datetime
 import pytz
 import h5py
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import numpy as np
 import re
 import os
@@ -41,6 +41,18 @@ def get_experiment_params(experiment):
         k: v for k, v in inspect.getmembers(experiment, lambda a: not callable(a)) if filter_key(k)
     }
     return experiment_params
+
+
+def storage_path_from_db(path):
+    """Resolve a stored database path to a filesystem path across OSes.
+
+    The DB may contain Windows-style separators, while the webpanel runs on macOS/Linux.
+    We keep the saved string convention unchanged and normalize only when turning it into a
+    real filesystem path.
+    """
+    normalized = str(path).replace('\\', '/')
+    relative = PurePosixPath(normalized)
+    return Path(STORAGE_PATH, *relative.parts)
 
 
 def cooldown_save_path():
@@ -253,7 +265,7 @@ def get_latest_run_path(experiment_ident):
 
 def figure_path_from_data_path(data_path):
     """ Find the figures path from the data path for a given experiment run. """
-    data_path = Path(data_path)
+    data_path = PurePosixPath(str(data_path).replace('\\', '/'))
     parts = list(data_path.parts)
     parts[-3] = FIGURES_DIRNAME
     new_path = Path(*parts).with_suffix('.png')
@@ -262,7 +274,7 @@ def figure_path_from_data_path(data_path):
 
 def debug_script_path_from_data_path(data_path):
     """ Find the debug script path from the data path for a given experiment run. """
-    data_path = Path(data_path)
+    data_path = PurePosixPath(str(data_path).replace('\\', '/'))
     parts = list(data_path.parts)
     parts[-3] = DEBUG_SCRIPTS_DIRNAME
     new_path = Path(*parts).with_suffix('.py')

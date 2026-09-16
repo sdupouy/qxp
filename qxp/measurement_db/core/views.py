@@ -11,7 +11,7 @@ from django.views.generic.edit import ModelFormMixin
 from django_filters.views import FilterView
 
 from qxp.utils.save import load_dict_from_hdf5, make_json_serializable, figure_path_from_data_path, \
-    debug_script_path_from_data_path, delete_file
+    debug_script_path_from_data_path, delete_file, storage_path_from_db
 from qxp.config import ALLOW_DELETE_EXPRUN, STORAGE_PATH
 from .models import Cooldown, ExperimentRun, Measurement, Parameter, Chip, OpticalTable, Experiment
 from .filters import ExperimentRunFilter, MeasurementFilter
@@ -231,7 +231,7 @@ def exp_run_config(request, pk):
     """ Fetch the configuration of an experiment run from the saved HDF5 file. """
     entry = get_object_or_404(ExperimentRun, id=pk)
     try:
-        path = Path(STORAGE_PATH) / entry.data_path
+        path = storage_path_from_db(entry.data_path)
         config_dict = load_dict_from_hdf5(
             path,
             keys=['exp_parameters', 'exp_config', 'instruments_config', 'qua_config']
@@ -246,7 +246,7 @@ def exp_run_code(request, pk):
     """ Fetch the source code of an experiment run from the saved HDF5 file. """
     entry = get_object_or_404(ExperimentRun, id=pk)
     try:
-        path = Path(STORAGE_PATH) / entry.data_path
+        path = storage_path_from_db(entry.data_path)
         code = load_dict_from_hdf5(path, keys=['experiment_code'])['experiment_code']
         return JsonResponse({"success": True, "code": code})
     except FileNotFoundError as e:
@@ -257,7 +257,7 @@ def exp_run_figure(request, pk):
     """ Fetch the saved figure of an experiment run. """
     entry = get_object_or_404(ExperimentRun, id=pk)
     rel_image_path = figure_path_from_data_path(entry.data_path)
-    image_path = Path(STORAGE_PATH) / rel_image_path
+    image_path = storage_path_from_db(rel_image_path)
     if not image_path.exists():
         raise Http404(f"Image not found at path {image_path}")
     return FileResponse(open(image_path, 'rb'), content_type='image/png')
@@ -283,7 +283,7 @@ class ExperimentRunDeleteView(DeleteView):
             return HttpResponseForbidden("This object cannot be deleted because ALLOW_DELETE_EXPRUN is set to False in the config.")
 
         # Delete the data, debug script and figure
-        data_path = Path(STORAGE_PATH) / self.object.data_path
+        data_path = storage_path_from_db(self.object.data_path)
         debug_script_path = debug_script_path_from_data_path(data_path)
         figure_path = figure_path_from_data_path(data_path)
         delete_file(data_path)
