@@ -167,6 +167,28 @@ class ExperimentRunListView(FilterView):
     model = ExperimentRun
     filterset_class = ExperimentRunFilter
 
+    def get_queryset(self):
+        return super().get_queryset().select_related('experiment', 'cooldown__chip')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        view_mode = self.request.GET.get('view', 'standard')
+        if view_mode not in {'standard', 'image'}:
+            view_mode = 'standard'
+
+        def query_string_for(mode):
+            query = self.request.GET.copy()
+            query['view'] = mode
+            return query.urlencode()
+
+        context.update({
+            'view_mode': view_mode,
+            'standard_view_query': query_string_for('standard'),
+            'image_view_query': query_string_for('image'),
+            'reset_query': f'view={view_mode}',
+        })
+        return context
+
 
 class ExperimentRunDetailView(DetailView, ModelFormMixin):
     model = ExperimentRun

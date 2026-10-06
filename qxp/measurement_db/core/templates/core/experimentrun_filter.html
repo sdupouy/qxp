@@ -3,44 +3,91 @@
 {% load crispy_forms_tags %}
 
 {% block content %}
-  <h1>Experiment runs</h1>
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+    <h1 class="mb-0">Experiment runs</h1>
+    <div class="btn-group" role="group" aria-label="Experiment run presentation">
+      <a href="?{{ standard_view_query }}"
+         class="btn btn-outline-primary {% if view_mode == 'standard' %}active{% endif %}"
+         {% if view_mode == 'standard' %}aria-current="page"{% endif %}>
+        <i class="bi bi-list me-1"></i>Standard view
+      </a>
+      <a href="?{{ image_view_query }}"
+         class="btn btn-outline-primary {% if view_mode == 'image' %}active{% endif %}"
+         {% if view_mode == 'image' %}aria-current="page"{% endif %}>
+        <i class="bi bi-images me-1"></i>Image view
+      </a>
+    </div>
+  </div>
 
   <form method="get" class="mb-3">
+    <input type="hidden" name="view" value="{{ view_mode }}">
     {{ filter.form|crispy }}
     <button type="submit" class="btn btn-primary me-2">Filter</button>
-    <a href="{% url 'experiment-run-list' %}" class="btn btn-outline-secondary" role="button">Reset</a>
+    <a href="{% url 'experiment-run-list' %}?{{ reset_query }}" class="btn btn-outline-secondary" role="button">Reset</a>
   </form>
   {% if object_list %}
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th scope="col"></th>
-          <th scope="col">Date</th>
-          <th scope="col">Name</th>
-          <th scope="col">Chip</th>
-          <th scope="col">Cooldown</th>
-          <th scope="col">Duration</th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for exp_run in object_list %}
-        <tr onclick="window.location='{% url 'experiment-run-detail' exp_run.id %}'" class="clickable">
-          <th scope="row">
-            {% if exp_run.starred %}
-              <i class="bi bi-star-fill"></i>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th scope="col"></th>
+            <th scope="col">Date</th>
+            <th scope="col">Name</th>
+            {% if view_mode == 'image' %}
+              <th scope="col">Chip # cooldown</th>
             {% else %}
-              <i class="bi bi-star"></i>
+              <th scope="col">Chip</th>
+              <th scope="col">Cooldown</th>
             {% endif %}
-          </th>
-          <td>{{ exp_run.datetime }}</td>
-          <td><a href="{% url 'experiment-detail' exp_run.experiment.identifier %}">{{ exp_run.experiment.display_name }}</a></td>
-          <td><a href="{% url 'chip-detail' exp_run.cooldown.chip.identifier %}">{{ exp_run.cooldown.chip }}</a></td>
-          <td>{{ exp_run.cooldown.number }}</td>
-          <td>{{ exp_run.duration|format_timedelta }}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+            <th scope="col">Duration</th>
+            {% if view_mode == 'image' %}
+              <th scope="col">Figure</th>
+              <th scope="col">Comment</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+        {% for exp_run in object_list %}
+          <tr onclick="window.location='{% url 'experiment-run-detail' exp_run.id %}'" class="clickable">
+            <th scope="row">
+              {% if exp_run.starred %}
+                <i class="bi bi-star-fill"></i>
+              {% else %}
+                <i class="bi bi-star"></i>
+              {% endif %}
+            </th>
+            <td>{{ exp_run.datetime }}</td>
+            <td><a href="{% url 'experiment-detail' exp_run.experiment.identifier %}">{{ exp_run.experiment.display_name }}</a></td>
+            <td>
+              <a href="{% url 'chip-detail' exp_run.cooldown.chip.identifier %}">{{ exp_run.cooldown.chip }}</a>
+              {% if view_mode == 'image' %}
+                # <a href="{% url 'cooldown-detail' exp_run.cooldown.id %}">{{ exp_run.cooldown.number }}</a>
+              {% endif %}
+            </td>
+            {% if view_mode == 'standard' %}
+              <td>{{ exp_run.cooldown.number }}</td>
+            {% endif %}
+            <td>{{ exp_run.duration|format_timedelta }}</td>
+            {% if view_mode == 'image' %}
+              <td class="experiment-run-figure-cell">
+                <img class="experiment-run-thumbnail"
+                     src="{% url 'experiment-run-figure' exp_run.pk %}"
+                     alt="Figure for {{ exp_run.experiment.display_name }}"
+                     loading="lazy">
+              </td>
+              <td class="experiment-run-comment">
+                {% if exp_run.comment %}
+                  {{ exp_run.comment|linebreaksbr }}
+                {% else %}
+                  <span class="text-body-secondary">—</span>
+                {% endif %}
+              </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
   {% else %}
     <p>No experiment logged in the database yet.</p>
   {% endif %}

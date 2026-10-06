@@ -106,3 +106,22 @@ a.btn:hover, a.navbar-brand:hover {
     height: 20px;
     width: 20px;
 }
+
+.experiment-run-figure-cell {
+    width: 180px;
+}
+
+.experiment-run-thumbnail {
+    display: block;
+    width: 180px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: var(--bs-border-radius);
+}
+
+.experiment-run-comment {
+    width: 24rem;
+    min-width: 14rem;
+    max-width: 24rem;
+    overflow-wrap: anywhere;
+}
