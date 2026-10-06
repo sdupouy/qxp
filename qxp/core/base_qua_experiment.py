@@ -324,7 +324,7 @@ class BaseQuaExperiment(ABC):
         if process_data:
             self.processed_data = self.process_data()
         self._abs_save_path = str(path)
-        return self  # so we can do `exp = ExpClass.load()`
+        return self  # so we can do `exp = ExpClass().load()`
 
     def log_experiment_run_to_db(self):
         """ Log the experiment run in the measurement database. """

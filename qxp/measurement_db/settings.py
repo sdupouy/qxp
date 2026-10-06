@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'django_filters',
+    'django_select2',
     'crispy_forms',
     'crispy_bootstrap5',
     'qxp.measurement_db.core',  # core app for storing calibration values

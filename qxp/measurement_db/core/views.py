@@ -162,6 +162,19 @@ class ExperimentDetailView(DetailView):
     slug_field = 'identifier'
     slug_url_kwarg = 'identifier'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        view_mode = self.request.GET.get('view', 'standard')
+        if view_mode not in {'standard', 'image'}:
+            view_mode = 'standard'
+
+        context.update({
+            'view_mode': view_mode,
+            'standard_view_query': 'view=standard',
+            'image_view_query': 'view=image',
+        })
+        return context
+
 
 class ExperimentRunListView(FilterView):
     model = ExperimentRun

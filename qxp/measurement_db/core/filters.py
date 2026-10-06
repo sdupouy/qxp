@@ -1,7 +1,8 @@
 import django_filters
 from django import forms
+from django_select2.forms import Select2Widget
 
-from .models import ExperimentRun, Measurement, Chip, Experiment
+from .models import Chip, Cooldown, Experiment, ExperimentRun, Measurement, Parameter
 
 
 class ExperimentRunFilter(django_filters.FilterSet):
@@ -11,6 +12,14 @@ class ExperimentRunFilter(django_filters.FilterSet):
         widget=forms.DateInput(attrs={'type': 'date'}),
         label='Date'
     )
+    experiment = django_filters.ModelChoiceFilter(
+        queryset=Experiment.objects.all(),
+        widget=Select2Widget,
+    )
+    cooldown = django_filters.ModelChoiceFilter(
+        queryset=Cooldown.objects.all(),
+        widget=Select2Widget,
+    )
 
     class Meta:
         model = ExperimentRun
@@ -18,9 +27,14 @@ class ExperimentRunFilter(django_filters.FilterSet):
 
 
 class MeasurementFilter(django_filters.FilterSet):
+    parameter = django_filters.ModelChoiceFilter(
+        queryset=Parameter.objects.all(),
+        widget=Select2Widget,
+    )
     chip = django_filters.ModelChoiceFilter(
         field_name='experiment_run__cooldown__chip',
         queryset=Chip.objects.all(),
+        widget=Select2Widget,
         label='Chip'
     )
 

@@ -19,16 +19,39 @@
     <p>No description available.</p>
   {% endif %}
 
-  <h2>Latest runs</h2>
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+    <h2 class="mb-0">Latest runs</h2>
+    <div class="btn-group" role="group" aria-label="Experiment run presentation">
+      <a href="?{{ standard_view_query }}"
+         class="btn btn-outline-primary {% if view_mode == 'standard' %}active{% endif %}"
+         {% if view_mode == 'standard' %}aria-current="page"{% endif %}>
+        <i class="bi bi-list me-1"></i>Standard view
+      </a>
+      <a href="?{{ image_view_query }}"
+         class="btn btn-outline-primary {% if view_mode == 'image' %}active{% endif %}"
+         {% if view_mode == 'image' %}aria-current="page"{% endif %}>
+        <i class="bi bi-images me-1"></i>Image view
+      </a>
+    </div>
+  </div>
   {% if object.experimentrun_set %}
-    <table class="table table-hover">
+    <div class="table-responsive">
+    <table class="table table-hover align-middle">
       <thead>
         <tr>
           <th scope="col"></th>
           <th scope="col">Date</th>
-          <th scope="col">Chip</th>
-          <th scope="col">Cooldown</th>
+          {% if view_mode == 'image' %}
+            <th scope="col">Chip # cooldown</th>
+          {% else %}
+            <th scope="col">Chip</th>
+            <th scope="col">Cooldown</th>
+          {% endif %}
           <th scope="col">Duration</th>
+          {% if view_mode == 'image' %}
+            <th scope="col">Figure</th>
+            <th scope="col">Comment</th>
+          {% endif %}
         </tr>
       </thead>
       <tbody>
@@ -39,16 +62,39 @@
               <i class="bi bi-star-fill"></i>
             {% else %}
               <i class="bi bi-star"></i>
-            {% endif %}
+          {% endif %}
           </td>
           <td>{{ exp_run.datetime }}</td>
-          <td><a href="{% url 'chip-detail' exp_run.cooldown.chip.identifier %}">{{ exp_run.cooldown.chip.identifier }}</a></td>
-          <td>{{ exp_run.cooldown.number }}</td>
+          <td>
+            <a href="{% url 'chip-detail' exp_run.cooldown.chip.identifier %}">{{ exp_run.cooldown.chip.identifier }}</a>
+            {% if view_mode == 'image' %}
+              # {{ exp_run.cooldown.number }}
+            {% endif %}
+          </td>
+          {% if view_mode == 'standard' %}
+            <td>{{ exp_run.cooldown.number }}</td>
+          {% endif %}
           <td>{{ exp_run.duration|format_timedelta }}</td>
+          {% if view_mode == 'image' %}
+            <td class="experiment-run-figure-cell">
+              <img class="experiment-run-thumbnail"
+                   src="{% url 'experiment-run-figure' exp_run.pk %}"
+                   alt="Figure for {{ exp_run.experiment.display_name }}"
+                   loading="lazy">
+            </td>
+            <td class="experiment-run-comment">
+              {% if exp_run.comment %}
+                {{ exp_run.comment|linebreaksbr }}
+              {% else %}
+                <span class="text-body-secondary">—</span>
+              {% endif %}
+            </td>
+          {% endif %}
         </tr>
       {% endfor %}
       </tbody>
     </table>
+    </div>
   {% else %}
     <p>No run logged in the database yet.</p>
   {% endif %}
